@@ -1,0 +1,162 @@
+<html>
+
+    <head>
+        <title>{{.Config.System.Name}}</title>
+        <meta http-equiv="refresh" content="1" >
+        <style>
+            * {
+                font-family: monospace;
+                font-size:10pt;
+                padding:2pt;
+                overflow:scroll;
+            }
+            body {
+                background-color: black;
+                color: white;
+            }
+        </style>
+    </head>
+    <body>
+        
+        <h1>{{.Config.System.Name}}</h1>
+
+        <table width="100%">
+            <tr>
+                <td style="background-color:{{if .Search }} red {{else}} green {{end}}"><a href="/">All files!</a></td>
+                {{range .AutomationsFiles }}
+                    <td style="background-color:{{if .Search }} green {{else}} red {{end}}">
+                        <a href="/{{ .QueryEscapeShortName }}">{{ .ShortName }}</a>
+                    </td>
+                {{end}}
+            </tr>
+        </table>
+        <br /><br />
+
+        <!-- <h1> {{ if .Search }} {{ .Search }} {{ else }} All files!! {{ end }}</h1> -->
+
+        {{range .Config.Automations}}
+            <div style="border:4pt {{if or (.Triggered) (.Triggered_Time | range2s) }} green {{else}} red {{end}} solid;margin-bottom:10pt;">
+                <b>[{{.File}}] {{.Name}}</b><br/>
+                <table width="100%">
+                    <tr>
+                        <td>Mode</td>
+                        <td>Retrigger</td>
+                        <td>Pause</td>
+                        <td>Reminder</td>
+                        <td>Delay</td>
+                        <td>Triggered</td>
+                        <td>Triggered_Time</td>
+                        <td>Value</td>
+                        <td>Value_Time</td>
+                    </tr>
+                    <tr>
+                        <td>{{.Mode}}</td>
+                        <td style="background-color:{{if .Retrigger_Active }} orange {{ end }}" >{{.Retrigger}}</td>
+                        <td style="background-color:{{if . | automationInPause }} orange {{ end }}" >{{.Pause}}</td>
+                        <td style="background-color:{{if .Reminder_Active }} orange {{ end }}" >{{.Reminder}}</td>
+                        <td style="background-color:{{if .Delay_Active }} orange {{ end }}" > {{.Delay}}</td>
+                        <td style="background-color:{{if .Triggered }} orange {{ end }}" >{{.Triggered}}</td>
+                        <td style="background-color:{{if .Triggered_Time | range2s }} orange {{ end }}" >{{.Triggered_Time}}</td>
+                        <td style="background-color:{{if .Value_Time | range2s }} orange {{ end }}" >{{.Value}}</td>
+                        <td style="background-color:{{if .Value_Time | range2s }} orange {{ end }}" >{{.Value_Time}}</td>
+                    </tr>
+                </table><br/>
+
+                <table width="100%">
+                    <tr>
+                        <td>Constraint</td>
+                        <td>Topic</td>
+                        <td>Object</td>
+                        <td>Comparator</td>
+                        <td>Value</td>
+                        <td>BlockRetained</td>
+                        <td>Reset</td>
+                        <td>Timeout</td>
+                        <td>Triggered</td>
+                        <td>Triggered_Time</td>
+                        <td>Value</td>
+                        <td>Value_Time</td>
+                    </tr>
+                    {{range .Constraints}}
+                        {{if .Mqtt}}
+                            <tr style="background-color:{{if or (.Triggered) (.Triggered_Time | range2s) }} green {{ else }} red {{ end }}" >
+                                <td>MQTT</td>
+                                <td>{{.Mqtt_Parsed.Topic}}</td>
+                                <td>{{.Mqtt_Parsed.Object}}</td>
+                                <td>{{.Mqtt_Parsed.Comparator}}</td>
+                                <td>{{.Mqtt_Parsed.Value}}</td>
+                                <td>{{.Mqtt_Parsed.BlockRetained}}</td>
+                                <td>{{.Mqtt_Parsed.Reset}}</td>
+                                <td>{{.Mqtt_Parsed.Timeout}}</td>
+                                <td style="background-color:{{if .Triggered }} orange {{ end }}" >{{.Triggered}}</td>
+                                <td style="background-color:{{if .Triggered_Time | range2s }} orange {{ end }}" >{{.Triggered_Time}}</td>
+                                <td style="background-color:{{if .Value_Time | range2s }} orange {{ end }}" ><b>{{.Value}}</b></td>
+                                <td style="background-color:{{if .Value_Time | range2s }} orange {{ end }}" ><b>{{.Value_Time}}</b></td>
+                            </tr>
+                        {{end}}
+                    {{end}}
+                </table>
+
+                <table width="100%">
+                    <tr>
+                        <td>Constraint</td>
+                        <td>Reset</td>
+                        <td>NextTime</td>
+                        <td>Triggered</td>
+                        <td>Triggered_Time</td>
+                    </tr>
+                    {{range .Constraints}}
+                        {{if .Cron}}
+                            <tr style="background-color:{{if or (.Triggered) (.Triggered_Time | range2s) }} green {{ else }} red {{ end }}" >
+                                <td>CRON</td>
+                                <td>{{.Cron_Parsed.Reset}}</td>
+                                <td>{{.Cron_Parsed.NextTime}}</td>
+                                <td>{{.Triggered}}</td>
+                                <td style="background-color:{{if .Triggered_Time | range2s }} orange {{ end }}">{{.Triggered_Time}}</td>
+                            </tr>
+                        {{end}}
+                    {{end}}
+                </table>
+
+                <table width="100%">
+                    <tr>
+                        <td>Action</td>
+                        <td>Topic</td>
+                        <td>Object</td>
+                        <td>Value</td>
+                        <td>Retained</td>
+                    </tr>
+                    {{range .Actions}}
+                        {{if .Mqtt}}
+                            <tr style="background-color:{{if or (.Triggered) (.Triggered_Time | range2s) }} green {{ else }} red {{ end }}" >
+                                <td>MQTT</td>
+                                <td>{{.Mqtt_Parsed.Topic}}</td>
+                                <td>{{.Mqtt_Parsed.Object}}</td>
+                                <td>{{.Mqtt_Parsed.Value}}</td>
+                                <td>{{.Mqtt_Parsed.Retained}}</td>
+                            </tr>
+                        {{end}}
+                    {{end}}
+                </table>
+
+                <table width="100%">
+                    <tr>
+                        <td>Action</td>
+                        <td>URL</td>
+                    </tr>
+                    {{range .Actions}}
+                        {{if .Http}}
+                            <tr style="background-color:{{if or (.Triggered) (.Triggered_Time | range2s ) }} green {{ else }} red {{ end }}" >
+                                <td>HTTP</td>
+                                <td>{{.Http}}</td>
+                            </tr>
+                        {{end}}
+                    {{end}}
+                </table>
+
+            </div>
+
+        {{end}}
+    </body>
+
+</html>

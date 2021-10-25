@@ -1,0 +1,21 @@
+# MQTT Automations 
+# Constrains: [ Mqtt, Cron ]
+# Actions:    [ Mqtt, Http ]
+
+- Name: Full Demo MQTT Automation
+  Mode: AND
+  Retrigger: true
+  Pause: 10s
+  Delay: 0s
+  Reminder: 1m
+  Constraints: 
+    - Mqtt : demo/sensor|value <= "3" -Reset 2s  -Timeout 5s -BlockRetained 0
+  Actions:
+    - Mqtt : demo/actuator = 1 -Retained 0
+
+- Name: Full Demo CRON Automation
+  Delay: 10s
+  Constraints: 
+    - Cron : "* * * * * -Reset 30s"
+  Actions:
+    - Mqtt : pushover/calvin2 = "CRON AUSGELÖST"
