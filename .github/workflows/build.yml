@@ -1,0 +1,32 @@
+name: Go
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.17
+
+    - name: Build MqttCommander_darwin_amd64
+      run: env GOOS=darwin GOARCH=amd64 go build -o MqttCommander_darwin_amd64 MqttCommander
+      
+    
+    - name: Build MqttCommander_linux_amd64
+      run: env GOOS=darwin GOARCH=amd64 go build -o MqttCommander_linux_amd64 MqttCommander
+      
+      
+    - name: Build MqttCommander_linux_armv5
+      run: env GOOS=darwin GOARCH=amd64 go build -o MqttCommander_linux_armv5 MqttCommander
+      
+    - name: Build MqttCommander_windows_amd64
+      run: env GOOS=darwin GOARCH=amd64 go build -o MqttCommander_windows_amd64 MqttCommander
