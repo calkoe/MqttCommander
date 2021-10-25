@@ -37,10 +37,7 @@ Changes to the files are automatically transferred to the live system. (Attentio
 ## Getting Started:
 Use one of this pre-Compiled Binarys, at the first start an order with the name "Config" is automatically created, here you will also find some sample files.
 
-* Download: [MacOS / AMD64](https://github.com/calkoe/MqttCommander/blob/main/MqttCommander_darwin_amd64)
-* Download: [Linux / AMD64](https://github.com/calkoe/MqttCommander/blob/main/MqttCommander_linux_amd64)
-* Download: [Linux / ARMv5 (RaspberryPi)](https://github.com/calkoe/MqttCommander/blob/main/MqttCommander_linux_armv5)
-* Download: [Windows / AMD64](https://github.com/calkoe/MqttCommander/blob/main/MqttCommander_windows_amd64.exe)
+[Download MqttCommander](https://github.com/calkoe/MqttCommander/releases)
 
 Of course, you can also start or compile the program yourself after downloading this repository.
 
