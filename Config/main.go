@@ -65,6 +65,7 @@ type Constraint_t struct {
 		Reset_Timer    *time.Timer
 		Timeout        time.Duration
 		Timeout_Ticker *time.Ticker
+		NoTrigger      bool
 		Token          MQTT.Token
 	}
 	Cron        string `yaml:"Cron"`
@@ -74,6 +75,7 @@ type Constraint_t struct {
 		Cron_Timer  *time.Timer
 		Reset       time.Duration
 		Reset_Timer *time.Timer
+		NoTrigger   bool
 	}
 	Triggered      bool
 	Triggered_Time time.Time
@@ -267,6 +269,7 @@ func Deploy() {
 							return
 						}
 						runActions(Automation_c)
+						Automation.Delay_Active = false
 					}
 				}()
 			}
@@ -377,12 +380,14 @@ func setTriggered(Automation *Automation_t, triggered bool) {
 	}
 
 	//	Log
-	log.WithFields(log.Fields{
-		"Name":      Automation.Name,
-		"File":      strings.Replace(Automation.File, Config.AutomationsPath+"/", "", 1),
-		"Value":     Automation.Value,
-		"Triggered": Automation.Triggered,
-	}).Debug("[CONFIG] Automation changed")
+	if Automation.Triggered != triggered {
+		log.WithFields(log.Fields{
+			"Name":      Automation.Name,
+			"File":      strings.Replace(Automation.File, Config.AutomationsPath+"/", "", 1),
+			"Value":     Automation.Value,
+			"Triggered": triggered,
+		}).Debug("[CONFIG] Automation changed")
+	}
 
 	Automation.Triggered = triggered
 }

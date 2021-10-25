@@ -72,6 +72,7 @@
                         <td>BlockRetained</td>
                         <td>Reset</td>
                         <td>Timeout</td>
+                        <td>NoTrigger</td>
                         <td>Triggered</td>
                         <td>Triggered_Time</td>
                         <td>Value</td>
@@ -88,7 +89,8 @@
                                 <td>{{.Mqtt_Parsed.BlockRetained}}</td>
                                 <td>{{.Mqtt_Parsed.Reset}}</td>
                                 <td>{{.Mqtt_Parsed.Timeout}}</td>
-                                <td style="background-color:{{if .Triggered }} orange {{ end }}" >{{.Triggered}}</td>
+                                <td>{{.Mqtt_Parsed.NoTrigger}}</td>
+                                <td style="background-color:{{if or (.Triggered) (.Triggered_Time | range2s) }}  orange {{ end }}" >{{.Triggered}}</td>
                                 <td style="background-color:{{if .Triggered_Time | range2s }} orange {{ end }}" >{{.Triggered_Time}}</td>
                                 <td style="background-color:{{if .Value_Time | range2s }} orange {{ end }}" ><b>{{.Value}}</b></td>
                                 <td style="background-color:{{if .Value_Time | range2s }} orange {{ end }}" ><b>{{.Value_Time}}</b></td>
@@ -102,6 +104,7 @@
                         <td>Constraint</td>
                         <td>Reset</td>
                         <td>NextTime</td>
+                        <td>NoTrigger</td>
                         <td>Triggered</td>
                         <td>Triggered_Time</td>
                     </tr>
@@ -111,7 +114,8 @@
                                 <td>CRON</td>
                                 <td>{{.Cron_Parsed.Reset}}</td>
                                 <td>{{.Cron_Parsed.NextTime}}</td>
-                                <td>{{.Triggered}}</td>
+                                <td>{{.Cron_Parsed.NoTrigger}}</td>
+                                <td style="background-color:{{if or (.Triggered) (.Triggered_Time | range2s) }} orange {{ end }}">{{.Triggered}}</td>
                                 <td style="background-color:{{if .Triggered_Time | range2s }} orange {{ end }}">{{.Triggered_Time}}</td>
                             </tr>
                         {{end}}

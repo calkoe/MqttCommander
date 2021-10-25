@@ -45,6 +45,9 @@ Of course, you can also start or compile the program yourself after downloading 
     go run MqttCommander
 ```
 
+```bash
+    go build MqttCommander
+```
 
 When the software is started for the first time, the configuration folder structure is created in the same directory as the executable file.
 
