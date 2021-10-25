@@ -10,11 +10,14 @@
 * Special functions, like Timeout, reminder and auto reset of rules
 * Simple Web-Dashbaord ro review the Status of your Rules 
 
+![Logo](https://user-images.githubusercontent.com/26646066/138765958-a8a80327-2f55-478b-991e-bc5523d5a2f1.png)
+
 <hr>
 
 ## How does ist work an what can i do with it ?
+
 The principle is simple: <br>
-a rule consists of two components: constraints and actions. <br>
+a automations consists of two components: constraints and actions. <br>
 If all constraints are met, the configured actions are triggered.
 
 ### Example:
