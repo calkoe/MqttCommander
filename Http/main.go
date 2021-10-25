@@ -2,6 +2,8 @@ package Http
 
 import (
 	"MqttCommander/Config"
+	"bytes"
+	"html/template"
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
@@ -23,7 +25,12 @@ func Deploy() {
 
 				// Setup Trigger Handler
 				Action.Trigger = func() {
-					http.Get(Action.Http)
+					Automation_c := Automation
+					Action_c := Action
+					tmpl, _ := template.New("value").Parse(Action_c.Http)
+					var buf bytes.Buffer
+					tmpl.Execute(&buf, Automation_c)
+					http.Get(buf.String())
 				}
 
 			}

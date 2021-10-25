@@ -2,8 +2,10 @@ package Mqtt
 
 import (
 	"MqttCommander/Config"
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"regexp"
 	"strconv"
 	"time"
@@ -51,7 +53,7 @@ var DefaultPublishHandler MQTT.MessageHandler = func(client MQTT.Client, msg MQT
 		}
 
 		// CheckTriggered if valueChanged
-		if triggeredChanged {
+		if triggeredChanged || Automation.Retrigger {
 			Config.CheckTriggered(Automation)
 		}
 
@@ -254,8 +256,12 @@ func Deploy() {
 
 					// Setup Trigger Handler
 					Action.Trigger = func() {
+						Automation_c := Automation
 						Action_c := Action
-						Client.Publish(Action_c.Mqtt_Parsed.Topic, 2, Action_c.Mqtt_Parsed.Retained, Action_c.Mqtt_Parsed.Value)
+						tmpl, _ := template.New("value").Parse(Action_c.Mqtt_Parsed.Value)
+						var buf bytes.Buffer
+						tmpl.Execute(&buf, Automation_c)
+						Client.Publish(Action_c.Mqtt_Parsed.Topic, 2, Action_c.Mqtt_Parsed.Retained, buf)
 					}
 
 				}

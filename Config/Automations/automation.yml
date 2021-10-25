@@ -2,11 +2,20 @@
 # Constrains: [ Mqtt, Cron ]
 # Actions:    [ Mqtt, Http ]
 
-- Name: REGEX DEMO
+- Name: Full Demo MQTT Automation
+  Mode: AND
+  Retrigger: true
+  Pause: 10s
+  Delay: 0s
+  Reminder: 1m
   Constraints: 
-    - Mqtt : demo/in1  == "v[0-9]"
-    - Mqtt : demo/in2  == "v[0-9]" -NoTrigger 1
+    - Mqtt : demo/sensor|value <= "3" -Reset 2s  -Timeout 5s -BlockRetained 0
   Actions:
-    - Mqtt : demo/put = "CRON AUSGELÖST"
-    
+    - Mqtt : demo/actuator = 1 -Retained 0
 
+- Name: Full Demo CRON Automation
+  Delay: 10s
+  Constraints: 
+    - Cron : "* * * * * -Reset 30s"
+  Actions:
+    - Mqtt : pushover/calvin2 = "CRON AUSGELÖST"
