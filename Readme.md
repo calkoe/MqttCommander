@@ -1,3 +1,5 @@
+![Logo](https://user-images.githubusercontent.com/26646066/138765958-a8a80327-2f55-478b-991e-bc5523d5a2f1.png)
+
 # ⚙ MQTT COMMANDER
 ## A robust and easy to use MQTT rule engine
 
@@ -9,8 +11,6 @@
 * Supports LIVE reload of config files
 * Special functions, like Timeout, reminder and auto reset of rules
 * Simple Web-Dashbaord ro review the Status of your Rules 
-
-![Logo](https://user-images.githubusercontent.com/26646066/138765958-a8a80327-2f55-478b-991e-bc5523d5a2f1.png)
 
 <hr>
 
