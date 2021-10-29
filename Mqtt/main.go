@@ -137,7 +137,7 @@ func Deploy() {
 
 				// Parse Arguments
 				if len(match) == 10 {
-					var err error
+
 					Constraint.Mqtt_Parsed.Topic = match[1]
 					Constraint.Mqtt_Parsed.Object = match[2]
 					Constraint.Mqtt_Parsed.Comparator = match[3]
@@ -153,9 +153,6 @@ func Deploy() {
 					Constraint.Mqtt_Parsed.Timeout, _ = time.ParseDuration(match[7])
 					Constraint.Mqtt_Parsed.BlockRetained, _ = strconv.ParseBool(match[8])
 					Constraint.Mqtt_Parsed.NoTrigger, _ = strconv.ParseBool(match[9])
-					if err != nil {
-						log.Error("[MQTT] Error while parsing constraint: ", err)
-					}
 
 					// Add Subscription
 					Constraint.Mqtt_Parsed.Token = Client.Subscribe(Constraint.Mqtt_Parsed.Topic, 2, nil)
@@ -253,6 +250,10 @@ func Deploy() {
 					}
 
 					Action.Mqtt_Parsed.Retained, _ = strconv.ParseBool(match[6])
+					/*if err != nil {
+						log.Errorf("[MQTT] Error while parsing action of Automation '%s' on file '%s', error: %s", Automation.Name, Automation.File, err)
+						continue
+					}*/
 
 					// Setup Trigger Handler
 					Action.Trigger = func() {

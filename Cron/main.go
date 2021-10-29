@@ -10,7 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var Constraint_regxp = regexp.MustCompile(`\s*(?P<Cron>[a-zA-Z0-9@*\s]*)(?:\s*-Reset\s+(?P<Reset>[[:digit:]nsusmssmh]+))?(?:\s+-NoTrigger\s+(?P<NoTrigger>[01]))?`)
+var Constraint_regxp = regexp.MustCompile(`\s*(?P<Cron>"?(?:\S*\s){4}\S|@[a-z]+"?)(?:\s*-Reset\s+(?P<Reset>[[:digit:]nsusmssmh]+))?(?:\s+-NoTrigger\s+(?P<NoTrigger>[01]))?`)
 
 func Deploy() {
 
@@ -30,13 +30,10 @@ func Deploy() {
 
 				// Parse Arguments
 				if len(match) == 4 {
-					var err error
-					Constraint.Cron_Parsed.Expression, err = cronexpr.Parse(match[1])
+
+					Constraint.Cron_Parsed.Expression, _ = cronexpr.Parse(match[1])
 					Constraint.Cron_Parsed.Reset, _ = time.ParseDuration(match[2])
 					Constraint.Mqtt_Parsed.NoTrigger, _ = strconv.ParseBool(match[3])
-					if err != nil {
-						log.Error("[CRON] Error while parsing constraint: ", err)
-					}
 
 					// Add Reset Timer
 					if Constraint.Cron_Parsed.Reset > 0 {
