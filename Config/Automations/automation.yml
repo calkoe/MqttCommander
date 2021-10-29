@@ -19,3 +19,13 @@
     - Cron : "* * * * * -Reset 30s"
   Actions:
     - Mqtt : pushover/calvin2 = "CRON AUSGELÖST"
+
+- Name: Autobatterie Aileen Cron
+  Mode: OR
+  Pause: 2h
+  Constraints: 
+    - Mqtt : koecher/car1|voltage_v
+    - Cron : "* 18-20 * * * -Reset 10s -NoTrigger 1"
+  Actions:
+    #- Mqtt : koecher/server/sms/calvin = "Aktuelle Spannung der Batterie ist {{ .Value }}V"
+    #- Mqtt : koecher/server/sms/aileen = "Aktuelle Spannung der Batterie ist {{ .Value }}V"

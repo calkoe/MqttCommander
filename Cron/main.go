@@ -10,7 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var Constraint_regxp = regexp.MustCompile(`\s*(?P<Cron>"?(?:\S*\s){4}\S|@[a-z]+"?)(?:\s*-Reset\s+(?P<Reset>[[:digit:]nsusmssmh]+))?(?:\s+-NoTrigger\s+(?P<NoTrigger>[01]))?`)
+var Constraint_regxp = regexp.MustCompile(`\s*(?P<Cron>(?:\S*\s){4}\S|@[a-z]+)(?:\s*-Reset\s+(?P<Reset>[[:digit:]nsusmssmh]+))?(?:\s+-NoTrigger\s+(?P<NoTrigger>[01]))?`)
 
 func Deploy() {
 
@@ -33,7 +33,7 @@ func Deploy() {
 
 					Constraint.Cron_Parsed.Expression, _ = cronexpr.Parse(match[1])
 					Constraint.Cron_Parsed.Reset, _ = time.ParseDuration(match[2])
-					Constraint.Mqtt_Parsed.NoTrigger, _ = strconv.ParseBool(match[3])
+					Constraint.Cron_Parsed.NoTrigger, _ = strconv.ParseBool(match[3])
 
 					// Add Reset Timer
 					if Constraint.Cron_Parsed.Reset > 0 {
@@ -49,7 +49,7 @@ func Deploy() {
 									return
 								}
 								setTriggered(Constraint_c, false)
-								if !Constraint.Mqtt_Parsed.NoTrigger {
+								if !Constraint.Cron_Parsed.NoTrigger {
 									Config.CheckTriggered(Automation_c)
 								}
 							}
@@ -69,7 +69,7 @@ func Deploy() {
 								return
 							}
 							setTriggered(Constraint_c, true)
-							if !Constraint.Mqtt_Parsed.NoTrigger {
+							if !Constraint.Cron_Parsed.NoTrigger {
 								Config.CheckTriggered(Automation_c)
 							}
 							Constraint.Cron_Parsed.NextTime = Constraint.Cron_Parsed.Expression.Next(time.Now())
