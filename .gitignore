@@ -1,4 +1,3 @@
 .DS_Store
-secrets
+_local
 MqttCommander_*
-Config/Automations/sicherheitssystem

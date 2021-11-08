@@ -156,17 +156,9 @@ func ReadConfig() {
 	Config.Automations = []Automation_t{}
 	log.Infof("[CONFIG] Successfully read main config file: %s", Config.ConfigPath+"/config.yml")
 
-	// Check AutomationsPath
-	if Config.AutomationsPath == "" {
-		Config.AutomationsPath = Config.ConfigPath + "/Automations"
-	}
-	log.Infof("[CONFIG] Set AutomationsPath to: %s", Config.ConfigPath)
-
-}
-
-func ReadAutomations() uint {
-
 	// Check Config.ConfigPath/Automations
+	Config.AutomationsPath = Config.ConfigPath + "/Automations"
+	log.Infof("[CONFIG] Set AutomationsPath to: %s", Config.AutomationsPath)
 	if _, err := os.Stat(Config.AutomationsPath); err != nil {
 		if os.IsNotExist(err) {
 			log.Warnf("[CONFIG] %S does not exits, creating it!", Config.AutomationsPath)
@@ -175,6 +167,10 @@ func ReadAutomations() uint {
 			os.WriteFile(Config.AutomationsPath+"/automation.yml", automation_yml, 0644)
 		}
 	}
+
+}
+
+func ReadAutomations() uint {
 
 	var affectedFiles uint
 
