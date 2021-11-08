@@ -58,7 +58,7 @@ Enter the URI of your MQTT server in the "config.yml" file.
 
 After restarting the software, you will find an overview of the active automations at http://localhost:9090 🔥
 
-![image](https://user-images.githubusercontent.com/26646066/138102977-52336cd4-cd8d-46e2-83eb-3de33186aef4.png)
+<img width="1440" alt="image" src="https://user-images.githubusercontent.com/26646066/140827939-a971d086-9b35-49ca-bb19-cb93baa41715.png">
 
 <hr>
 
