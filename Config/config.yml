@@ -2,6 +2,5 @@
 
 System:
   Name: MqttCommander System Name
-  #MqttUri: tcp://user:password@broker:1883/
-  MqttUri: tcp://admin:bukkit2404@192.168.1.6:1883
+  MqttUri: tcp://user:password@broker:1883/
 
