@@ -1,0 +1,28 @@
+- Name: INIT Test 1
+  Triggered: true
+  Delay: 2s
+  Actions:
+    - Mqtt : _test/1/con1 = 1
+    - Mqtt : _test/1/con2 = 1
+    - Mqtt : _test/1/con3 = 1
+
+- Name: Simple OR, Trigger after 2s Delay
+  Mode: OR
+  Delay: 2s
+  Constraints: 
+    - Mqtt : _test/1/con3  == 1
+    - Mqtt : _test/1/con99 == 1
+  Actions:
+    - Mqtt : _test/1/con1  = 1 
+
+- Name: A - Simple AND, should be triggered after 4s if _test/1/con1 is repeated after _test/1/con2 and _test/1/con3 
+  Constraints: 
+    - Mqtt : _test/1/con1  == 1
+    - Mqtt : _test/1/con2  == 1 -NoTrigger 1
+    - Mqtt : _test/1/con3  == 1 -NoTrigger 1
+  Actions:
+    - Mqtt : _test/1/a = 1 
+
+- Name: SUCCESS
+  Constraints: 
+    - Mqtt : _test/1/a = 1 

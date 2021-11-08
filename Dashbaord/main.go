@@ -16,6 +16,9 @@ import (
 //go:embed index.html
 var index_html string
 
+//go:embed bootstrap.min.css
+var bootstrap_min_css string
+
 type tmplData_t struct {
 	Config           Config.Config_t
 	Search           string
@@ -33,12 +36,18 @@ func Init() {
 		DisableStartupMessage: true,
 	})
 
-	app.Get("/:file?", func(c *fiber.Ctx) error {
+	app.Get("/bootstrap.min.css", func(c *fiber.Ctx) error {
+		c.Set("Content-Type", "text/css; charset=utf-8")
+		c.SendString(bootstrap_min_css)
+		return nil
+	})
+
+	app.Get("/:search?", func(c *fiber.Ctx) error {
 
 		// Query
 		var tmplData tmplData_t
 		tmplData.Config = Config.Config
-		tmplData.Search, _ = url.QueryUnescape(c.Params("file"))
+		tmplData.Search, _ = url.QueryUnescape(c.Params("search"))
 
 		// Prepare tmplData.AutomationsFiles
 		for AutomationsFile := range Config.Config.AutomationsFiles {
@@ -76,13 +85,53 @@ func Init() {
 			"range2s": func(t time.Time) bool {
 				return time.Since(t) < 2*time.Second
 			},
+			"diff": func(t time.Time) string {
+				if t.IsZero() {
+					return "-"
+				} else {
+					return t.Sub(time.Now()).Round(time.Second).String()
+				}
+			},
 			"automationInPause": func(a *Config.Automation_t) bool {
 				return time.Since(a.Triggered_Time) < a.Pause
 			},
 			"automationInDelay": func(a *Config.Automation_t) bool {
 				return time.Since(a.Triggered_Time) < a.Delay
 			},
+			"automationHaveConstraintMqtt": func(a *Config.Automation_t) bool {
+				for _, Constraint := range a.Constraints {
+					if Constraint.Mqtt != "" {
+						return true
+					}
+				}
+				return false
+			},
+			"automationHaveConstraintCron": func(a *Config.Automation_t) bool {
+				for _, Constraint := range a.Constraints {
+					if Constraint.Cron != "" {
+						return true
+					}
+				}
+				return false
+			},
+			"automationHaveActionMqtt": func(a *Config.Automation_t) bool {
+				for _, Action := range a.Actions {
+					if Action.Mqtt != "" {
+						return true
+					}
+				}
+				return false
+			},
+			"automationHaveActionHttp": func(a *Config.Automation_t) bool {
+				for _, Action := range a.Actions {
+					if Action.Http != "" {
+						return true
+					}
+				}
+				return false
+			},
 		}).Parse(index_html)
+		//}).ParseFiles("Dashbaord/index.html")
 		err := tmpl.Execute(c, tmplData)
 		if err != nil {
 			log.Errorf("[DASHBAORD] Template Error: %s", err)

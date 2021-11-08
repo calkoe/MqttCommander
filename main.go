@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"MqttCommander/Config"
@@ -23,7 +24,7 @@ func main() {
 	log.Info("[MAIN] Welcome to MqttCommader!")
 
 	// Setup
-	Config.SetupConfig()
+	Config.SetupConfig(os.Getenv("MQTTC_CONFIG_PATH"))
 	Config.ReadConfig()
 	Mqtt.Connect()
 	Dashbaord.Init()

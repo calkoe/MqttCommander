@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -35,6 +36,7 @@ type Automation_t struct {
 	Name             string `yaml:"Name"`
 	Mode             string `default:"AND" yaml:"Mode"`
 	Retrigger        bool   `yaml:"Retrigger"`
+	Hidden           bool   `yaml:"Hidden"`
 	Retrigger_Active bool
 	Pause            time.Duration `yaml:"Pause"`
 	Reminder         time.Duration `yaml:"Reminder"`
@@ -107,15 +109,26 @@ var config_yml []byte
 //go:embed Automations/automation.yml
 var automation_yml []byte
 
-func SetupConfig() {
+func SetupConfig(ConfigPath string) {
 
 	// Set ConfigPath
-	ex, err := os.Executable()
-	if err != nil {
-		panic(err)
+	if ConfigPath == "" {
+
+		// Automatic
+		ex, err := os.Executable()
+		if err != nil {
+			panic(err)
+		}
+		Config.ConfigPath = filepath.Dir(ex) + "/Config"
+		log.Infof("[CONFIG] ConfigPath has been automatically set to: %s", Config.ConfigPath)
+
+	} else {
+
+		//Manual
+		Config.ConfigPath = ConfigPath
+		log.Infof("[CONFIG] ConfigPath has been manually set to: %s", Config.ConfigPath)
+
 	}
-	Config.ConfigPath = filepath.Dir(ex) + "/Config"
-	log.Infof("[CONFIG] Set ConfigPath to: %s", Config.ConfigPath)
 
 	// Create AutomationsFiles
 	Config.AutomationsFiles = make(map[string]string)
@@ -301,7 +314,7 @@ func Deploy() {
 	}
 }
 
-func CheckTriggered(Automation *Automation_t) {
+func CheckTriggered(Automation *Automation_t, NoTrigger bool) {
 
 	// Debug
 	// log.Debugf("CheckTriggered Automation: %s", Automation.Name)
@@ -314,9 +327,13 @@ func CheckTriggered(Automation *Automation_t) {
 		}
 	}
 	if Automation.Mode == "AND" && triggered == len(Automation.Constraints) {
-		setTriggered(Automation, true)
+		if !NoTrigger {
+			setTriggered(Automation, true)
+		}
 	} else if Automation.Mode == "OR" && triggered >= 1 {
-		setTriggered(Automation, true)
+		if !NoTrigger {
+			setTriggered(Automation, true)
+		}
 	} else {
 		setTriggered(Automation, false)
 	}
@@ -442,4 +459,16 @@ func deletebyFile(file string) {
 
 	Config.Automations = Automations
 
+}
+
+func Find(search string, data string) (match string) {
+	exp, err := regexp.Compile(search)
+	if err != nil {
+		log.Errorf("[MQTT] Error while Parsing Regex: %s", err)
+	}
+	results := exp.FindStringSubmatch(data)
+	if len(results) == 2 {
+		match = results[1]
+	}
+	return
 }
