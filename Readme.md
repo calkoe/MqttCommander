@@ -1,4 +1,6 @@
 ![Logo](https://user-images.githubusercontent.com/26646066/138765958-a8a80327-2f55-478b-991e-bc5523d5a2f1.png)
+![IMG_0EC4D6E1BBAC-1](https://user-images.githubusercontent.com/26646066/141022858-2f78ebd0-f7a2-4eee-afb0-aac1657fe2fe.jpeg)
+
 
 # ⚙ MQTT COMMANDER - A robust and easy to use MQTT rule engine
 
@@ -57,8 +59,6 @@ When the software is started for the first time, the configuration folder struct
 Enter the URI of your MQTT server in the "config.yml" file.
 
 After restarting the software, you will find an overview of the active automations at http://localhost:9090 🔥
-
-<img width="1440" alt="image" src="https://user-images.githubusercontent.com/26646066/140840339-fd18b392-b110-467d-bd6a-ad4d4411a827.png">
 
 <hr>
 
