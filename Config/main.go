@@ -68,6 +68,7 @@ type Constraint_t struct {
 		Timeout        time.Duration
 		Timeout_Ticker *time.Ticker
 		NoTrigger      bool
+		NoValue        bool
 		Token          MQTT.Token
 	}
 	Cron        string `yaml:"Cron"`

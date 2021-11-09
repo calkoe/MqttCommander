@@ -40,7 +40,7 @@ func Deploy() {
 								Constraint_c.Cron_Parsed.Reset_Timer.Stop()
 								return
 							}
-							setTriggered(Automation_c, Constraint_c, true)
+							setTriggered(Automation_c, Constraint_c, false)
 						}
 					}()
 				}

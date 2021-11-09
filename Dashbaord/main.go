@@ -68,6 +68,16 @@ func Init() {
 		sort.SliceStable(tmplData.AutomationsFiles, func(i, j int) bool {
 			return tmplData.AutomationsFiles[i].ShortName > tmplData.AutomationsFiles[j].ShortName
 		})
+		tmplData.AutomationsFiles = append(tmplData.AutomationsFiles,
+			struct {
+				ShortName            string
+				Search               bool
+				QueryEscapeShortName string
+			}{
+				ShortName:            "All files!",
+				Search:               tmplData.Search == "",
+				QueryEscapeShortName: url.QueryEscape(""),
+			})
 
 		// Filter Automations by File
 		if tmplData.Search != "" {

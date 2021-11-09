@@ -138,11 +138,11 @@ func Deploy() {
 					if match[5] != "" {
 						Constraint.Mqtt_Parsed.Value, _ = strconv.ParseFloat(match[5], 64)
 					}
-
 					Constraint.Mqtt_Parsed.Reset, _ = time.ParseDuration(Config.Find(`-Reset\s+(\S+)`, Constraint.Mqtt))
 					Constraint.Mqtt_Parsed.Timeout, _ = time.ParseDuration(Config.Find(`-Timeout\s+(\S+)`, Constraint.Mqtt))
 					Constraint.Mqtt_Parsed.BlockRetained, _ = strconv.ParseBool(Config.Find(`-BlockRetained\s+(\S+)`, Constraint.Mqtt))
 					Constraint.Mqtt_Parsed.NoTrigger, _ = strconv.ParseBool(Config.Find(`-NoTrigger\s+(\S+)`, Constraint.Mqtt))
+					Constraint.Mqtt_Parsed.NoValue, _ = strconv.ParseBool(Config.Find(`-NoValue\s+(\S+)`, Constraint.Mqtt))
 
 					// Add Subscription
 					Constraint.Mqtt_Parsed.Token = Client.Subscribe(Constraint.Mqtt_Parsed.Topic, 2, nil)
@@ -211,46 +211,35 @@ func Deploy() {
 
 					Action.Mqtt_Parsed.Topic = match[1]
 					Action.Mqtt_Parsed.Object = match[2]
-
-					if Action.Mqtt_Parsed.Object != "" {
-						// Value_String
-						if match[4] != "" {
-							Action.Mqtt_Parsed.Value = fmt.Sprintf("{\"%s\":\"%s\"}", Action.Mqtt_Parsed.Object, match[4])
-						}
-						// Value_Float
-						if match[5] != "" {
-							Action.Mqtt_Parsed.Value = fmt.Sprintf("{\"%s\":%s}", Action.Mqtt_Parsed.Object, match[5])
-						}
-					} else {
-						// Value_String
-						if match[4] != "" {
-							Action.Mqtt_Parsed.Value = match[4]
-
-						}
-						// Value_Float
-						if match[5] != "" {
-							Action.Mqtt_Parsed.Value = match[5]
-						}
+					//Constraint.Mqtt_Parsed.Comparator = match[3]
+					// Value_String
+					if match[4] != "" {
+						Action.Mqtt_Parsed.Value = "\"" + match[4] + "\""
 					}
-
+					// Value_Float
+					if match[5] != "" {
+						Action.Mqtt_Parsed.Value = match[5]
+					}
 					Action.Mqtt_Parsed.Retained, _ = strconv.ParseBool(Config.Find(`-Retained\s+(\S+)`, Action.Mqtt))
-
-					/*if err != nil {
-						log.Errorf("[MQTT] Error while parsing action of Automation '%s' on file '%s', error: %s", Automation.Name, Automation.File, err)
-						continue
-					}*/
 
 					// Setup Trigger Handler
 					Action.Trigger = func() {
 						Automation_c := Automation
 						Action_c := Action
+						var payload string
 						tmpl, err := template.New("value").Parse(Action_c.Mqtt_Parsed.Value)
 						if err != nil {
 							log.Errorf("[MQTT] error while parsing Template: %s", err)
 						} else {
 							var buf bytes.Buffer
 							tmpl.Execute(&buf, Automation_c)
-							Client.Publish(Action_c.Mqtt_Parsed.Topic, 2, Action_c.Mqtt_Parsed.Retained, buf)
+							if Action_c.Mqtt_Parsed.Object != "" {
+								payload = fmt.Sprintf("{\"%s\":%s}", Action.Mqtt_Parsed.Object, buf.String())
+							} else {
+								payload = buf.String()
+							}
+							// Publish
+							Client.Publish(Action_c.Mqtt_Parsed.Topic, 2, Action_c.Mqtt_Parsed.Retained, payload)
 						}
 
 					}
@@ -277,31 +266,47 @@ func onMessage(Automation *Config.Automation_t, Constraint *Config.Constraint_t,
 		return
 	}
 
-	// Value = Raw
+	// Raw Value
 	if Constraint.Mqtt_Parsed.Object == "" {
+
+		// Set Constraint value
 		parsed, err := strconv.ParseFloat(string(msg.Payload()), 64)
 		if err == nil {
 			Constraint.Value = parsed
-			Automation.Value = parsed
 		} else {
 			Constraint.Value = string(msg.Payload())
-			Automation.Value = string(msg.Payload())
 		}
 		Constraint.Value_Time = time.Now()
-		Automation.Value_Time = time.Now()
+
+		// Don't set Automations value to Constraint value
+		if !Constraint.Mqtt_Parsed.NoValue {
+			if err == nil {
+				Automation.Value = parsed
+			} else {
+				Automation.Value = string(msg.Payload())
+			}
+			Automation.Value_Time = time.Now()
+		}
+
 	}
 
-	// Value = JSON Object
+	// JSON Object Value
 	if Constraint.Mqtt_Parsed.Object != "" {
+
 		jsonMap := make(map[string]interface{})
 		json.Unmarshal(msg.Payload(), &jsonMap)
 		if jsonMap[Constraint.Mqtt_Parsed.Object] == nil {
 			return
 		}
+		// Set Constraint value
 		Constraint.Value = jsonMap[Constraint.Mqtt_Parsed.Object]
-		Automation.Value = jsonMap[Constraint.Mqtt_Parsed.Object]
 		Constraint.Value_Time = time.Now()
-		Automation.Value_Time = time.Now()
+		// Don't set Automations value to Constraint value
+		if !Constraint.Mqtt_Parsed.NoValue {
+			Automation.Value = jsonMap[Constraint.Mqtt_Parsed.Object]
+			Automation.Value_Time = time.Now()
+		}
+
 	}
 
 	// Reset Timeout Ticker

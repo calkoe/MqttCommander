@@ -3,18 +3,18 @@
   Delay: 2s
   Actions:
     - Mqtt : _test/2/con1 = 1
-    - Mqtt : _test/2/con2 = -1
-    - Mqtt : _test/2/con3 = 1.9
-    - Mqtt : _test/2/con4 = -1.563
+    - Mqtt : _test/2/con2.val = -1
+    - Mqtt : _test/2/con3.val = 1.9
+    - Mqtt : _test/2/con4.val = -1.563
     - Mqtt : _test/2/con5.val = "demo"
     - Mqtt : _test/2/con6 = "-"
 
 - Name: A - Check Conditions (true)
   Constraints: 
     - Mqtt : _test/2/con1 == 1
-    - Mqtt : _test/2/con2 == -1
-    - Mqtt : _test/2/con3 < 2
-    - Mqtt : _test/2/con4 < -1.5
+    - Mqtt : _test/2/con2.val == -1
+    - Mqtt : _test/2/con3.val < 2
+    - Mqtt : _test/2/con4.val < -1.5
     - Mqtt : _test/2/con5.val == "demo"
     - Mqtt : _test/2/con6 == "-"
   Actions:
