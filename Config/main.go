@@ -93,6 +93,7 @@ type Action_t struct {
 		Topic    string
 		Object   string
 		Value    string
+		IsString bool
 		Retained bool
 	}
 	Http           string `yaml:"Http"`

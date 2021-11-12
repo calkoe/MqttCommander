@@ -214,11 +214,13 @@ func Deploy() {
 					//Constraint.Mqtt_Parsed.Comparator = match[3]
 					// Value_String
 					if match[4] != "" {
-						Action.Mqtt_Parsed.Value = "\"" + match[4] + "\""
+						Action.Mqtt_Parsed.Value = match[4]
+						Action.Mqtt_Parsed.IsString = true
 					}
 					// Value_Float
 					if match[5] != "" {
 						Action.Mqtt_Parsed.Value = match[5]
+						Action.Mqtt_Parsed.IsString = false
 					}
 					Action.Mqtt_Parsed.Retained, _ = strconv.ParseBool(Config.Find(`-Retained\s+(\S+)`, Action.Mqtt))
 
@@ -234,7 +236,11 @@ func Deploy() {
 							var buf bytes.Buffer
 							tmpl.Execute(&buf, Automation_c)
 							if Action_c.Mqtt_Parsed.Object != "" {
-								payload = fmt.Sprintf("{\"%s\":%s}", Action.Mqtt_Parsed.Object, buf.String())
+								if Action.Mqtt_Parsed.IsString {
+									payload = fmt.Sprintf("{\"%s\":\"%s\"}", Action.Mqtt_Parsed.Object, buf.String())
+								} else {
+									payload = fmt.Sprintf("{\"%s\":%s}", Action.Mqtt_Parsed.Object, buf.String())
+								}
 							} else {
 								payload = buf.String()
 							}
