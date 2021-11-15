@@ -51,12 +51,12 @@ var DefaultPublishHandler MQTT.MessageHandler = func(client MQTT.Client, msg MQT
 
 func Connect() {
 
-	log.Infof("[MQTT] Connecting to MQTT Server: %s", Config.Config.System.MqttUri)
+	log.Infof("[MQTT] Connecting to MQTT Server: %s", Config.Config.MqttUri)
 
 	// Create Client
 	opts := MQTT.NewClientOptions()
-	opts.AddBroker(Config.Config.System.MqttUri)
-	opts.SetClientID(Config.Config.System.Name)
+	opts.AddBroker(Config.Config.MqttUri)
+	opts.SetClientID(Config.Config.Name)
 
 	// Set Reconnect
 	opts.SetKeepAlive(5 * time.Second)

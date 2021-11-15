@@ -20,16 +20,14 @@ import (
 )
 
 type Config_t struct {
-	System           System_t       `yaml:"System"`
+	Name             string `yaml:"Name"`
+	Timezone         string `yaml:"Timezone"`
+	MqttUri          string `yaml:"MqttUri"`
+	Timezone_parsed  *time.Location
 	Automations      []Automation_t `yaml:"Automations"`
 	AutomationsPath  string         `yaml:"AutomationsPath"`
 	AutomationsFiles map[string]string
 	ConfigPath       string
-}
-
-type System_t struct {
-	Name    string `yaml:"Name"`
-	MqttUri string `yaml:"MqttUri"`
 }
 
 type Automation_t struct {
@@ -169,6 +167,17 @@ func ReadConfig() {
 			os.WriteFile(Config.AutomationsPath+"/automation.yml", automation_yml, 0644)
 		}
 	}
+
+	// Setup Timezone
+	if Config.Timezone == "" {
+		Config.Timezone = "UTC"
+	}
+	Config.Timezone_parsed, err = time.LoadLocation(Config.Timezone)
+	if err != nil {
+		log.Errorf("[CONFIG] Error while loading Timezone %s %s", Config.Timezone, err)
+		panic("Timezone-Error!")
+	}
+	log.Infof("[CONFIG] Using Timezone: %s, Current Time: %s", Config.Timezone, time.Now().In(Config.Timezone_parsed))
 
 }
 

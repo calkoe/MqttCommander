@@ -1,5 +1,4 @@
 # System Settings
-
-System:
-  Name: MqttCommander System Name
-  MqttUri: tcp://user:password@broker:1883/
+Name: MqttCommander System Name
+Timezone: Europe/Berlin
+MqttUri: tcp://user:password@broker:1883/

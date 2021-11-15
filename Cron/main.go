@@ -46,8 +46,8 @@ func Deploy() {
 				}
 
 				// Add Cron Trigger
-				Constraint.Cron_Parsed.NextTime = Constraint.Cron_Parsed.Expression.Next(time.Now())
-				Constraint.Cron_Parsed.Cron_Timer = time.NewTimer(time.Until(Constraint.Cron_Parsed.NextTime))
+				Constraint.Cron_Parsed.NextTime = Constraint.Cron_Parsed.Expression.Next(time.Now().In(Config.Config.Timezone_parsed))
+				Constraint.Cron_Parsed.Cron_Timer = time.NewTimer(Constraint.Cron_Parsed.NextTime.Sub(time.Now().In(Config.Config.Timezone_parsed)))
 				go func() {
 					Automation_c := Automation
 					Constraint_c := Constraint
@@ -58,11 +58,11 @@ func Deploy() {
 							return
 						}
 						setTriggered(Automation_c, Constraint_c, true)
-						Constraint.Cron_Parsed.NextTime = Constraint.Cron_Parsed.Expression.Next(time.Now())
-						Constraint.Cron_Parsed.Cron_Timer.Reset(time.Until(Constraint.Cron_Parsed.NextTime))
+						Constraint.Cron_Parsed.NextTime = Constraint.Cron_Parsed.Expression.Next(time.Now().In(Config.Config.Timezone_parsed))
+						Constraint.Cron_Parsed.Cron_Timer.Reset(Constraint.Cron_Parsed.NextTime.Sub(time.Now().In(Config.Config.Timezone_parsed)))
 						// Reset immediately if no Reset timer defined
 						if Constraint.Cron_Parsed.Reset == 0 {
-							setTriggered(Automation_c, Constraint_c, true)
+							setTriggered(Automation_c, Constraint_c, false)
 						}
 					}
 				}()
