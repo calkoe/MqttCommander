@@ -20,7 +20,11 @@ var index_html string
 var bootstrap_min_css string
 
 type tmplData_t struct {
-	Config           Config.Config_t
+	LocalTime        time.Time
+	IdCounter        uint64
+	ConfigFile       Config.ConfigFile_t
+	Automations      map[uint64]*Config.Automation_t
+	ConfigPath       string
 	Search           string
 	AutomationsFiles []struct {
 		ShortName            string
@@ -46,12 +50,16 @@ func Init() {
 
 		// Query
 		var tmplData tmplData_t
-		tmplData.Config = Config.Config
+		tmplData.LocalTime = time.Now().In(Config.GetConfigFile().Timezone_parsed)
+		tmplData.IdCounter = Config.IdCounter
+		tmplData.ConfigFile = Config.GetConfigFile()
+		tmplData.Automations = make(map[uint64]*Config.Automation_t)
+		tmplData.ConfigPath = Config.ConfigPath
 		tmplData.Search, _ = url.QueryUnescape(c.Params("search"))
 
 		// Prepare tmplData.AutomationsFiles
-		for AutomationsFile := range Config.Config.AutomationsFiles {
-			ShortName := strings.Replace(AutomationsFile, Config.Config.AutomationsPath+"/", "", 1)
+		for AutomationsFile := range Config.GetConfigFile().AutomationsFiles {
+			ShortName := strings.Replace(AutomationsFile, Config.GetConfigFile().AutomationsPath+"/", "", 1)
 			tmplData.AutomationsFiles = append(tmplData.AutomationsFiles,
 				struct {
 					ShortName            string
@@ -79,13 +87,10 @@ func Init() {
 				QueryEscapeShortName: url.QueryEscape(""),
 			})
 
-		// Filter Automations by File
-		if tmplData.Search != "" {
-			tmplData.Config.Automations = nil
-			for _, Automation := range Config.Config.Automations {
-				if strings.Replace(Automation.File, Config.Config.AutomationsPath+"/", "", 1) == tmplData.Search {
-					tmplData.Config.Automations = append(tmplData.Config.Automations, Automation)
-				}
+		// Prepare Automations
+		for id, Automation := range Config.GetAutomations() {
+			if tmplData.Search == "" || strings.Replace(Automation.File, Config.GetConfigFile().AutomationsPath+"/", "", 1) == tmplData.Search {
+				tmplData.Automations[id] = &Automation
 			}
 		}
 
@@ -102,39 +107,47 @@ func Init() {
 					return t.Sub(time.Now()).Round(time.Second).String()
 				}
 			},
-			"automationInPause": func(a *Config.Automation_t) bool {
+			"automationInPause": func(a Config.Automation_t) bool {
 				return time.Since(a.Triggered_Time) < a.Pause
 			},
-			"automationInDelay": func(a *Config.Automation_t) bool {
+			"automationInDelay": func(a Config.Automation_t) bool {
 				return time.Since(a.Triggered_Time) < a.Delay
 			},
-			"automationHaveConstraintMqtt": func(a *Config.Automation_t) bool {
-				for _, Constraint := range a.Constraints {
-					if Constraint.Mqtt != "" {
+			"automationHaveConstraintMqtt": func(a Config.Automation_t) bool {
+				for Constraint_k, _ := range a.Constraints {
+					a.Constraints[Constraint_k].Mutex.Lock()
+					defer a.Constraints[Constraint_k].Mutex.Unlock()
+					if a.Constraints[Constraint_k].Mqtt != "" {
 						return true
 					}
 				}
 				return false
 			},
-			"automationHaveConstraintCron": func(a *Config.Automation_t) bool {
-				for _, Constraint := range a.Constraints {
-					if Constraint.Cron != "" {
+			"automationHaveConstraintCron": func(a Config.Automation_t) bool {
+				for Constraint_k, _ := range a.Constraints {
+					a.Constraints[Constraint_k].Mutex.Lock()
+					defer a.Constraints[Constraint_k].Mutex.Unlock()
+					if a.Constraints[Constraint_k].Cron != "" {
 						return true
 					}
 				}
 				return false
 			},
-			"automationHaveActionMqtt": func(a *Config.Automation_t) bool {
-				for _, Action := range a.Actions {
-					if Action.Mqtt != "" {
+			"automationHaveActionMqtt": func(a Config.Automation_t) bool {
+				for Action_k, _ := range a.Actions {
+					a.Actions[Action_k].Mutex.Lock()
+					defer a.Actions[Action_k].Mutex.Unlock()
+					if a.Actions[Action_k].Mqtt != "" {
 						return true
 					}
 				}
 				return false
 			},
-			"automationHaveActionHttp": func(a *Config.Automation_t) bool {
-				for _, Action := range a.Actions {
-					if Action.Http != "" {
+			"automationHaveActionHttp": func(a Config.Automation_t) bool {
+				for Action_k, _ := range a.Actions {
+					a.Actions[Action_k].Mutex.Lock()
+					defer a.Actions[Action_k].Mutex.Unlock()
+					if a.Actions[Action_k].Http != "" {
 						return true
 					}
 				}

@@ -6,18 +6,16 @@ import (
 	"time"
 
 	"github.com/gorhill/cronexpr"
-	log "github.com/sirupsen/logrus"
 )
 
 func Deploy() {
 
-	log.Info("[CRON] Initialize Constraints and Actions")
-
-	for Automation_k := range Config.Config.Automations {
-		Automation := &Config.Config.Automations[Automation_k]
+	for id, Automation := range Config.GetAutomations() {
 
 		// Setup Constraints
 		for Constraint_k := range Automation.Constraints {
+			Automation.Constraints[Constraint_k].Mutex.Lock()
+			defer Automation.Constraints[Constraint_k].Mutex.Unlock()
 			Constraint := &Automation.Constraints[Constraint_k]
 
 			if Constraint.Cron != "" && !Constraint.Initialized {
@@ -31,41 +29,45 @@ func Deploy() {
 				if Constraint.Cron_Parsed.Reset > 0 {
 					Constraint.Cron_Parsed.Reset_Timer = time.NewTimer(Constraint.Cron_Parsed.Reset)
 					Constraint.Cron_Parsed.Reset_Timer.Stop()
-					go func() {
-						Automation_c := Automation
-						Constraint_c := Constraint
-						for {
-							<-Constraint_c.Cron_Parsed.Reset_Timer.C
-							if !Constraint_c.Initialized {
-								Constraint_c.Cron_Parsed.Reset_Timer.Stop()
-								return
+					go func(id uint64, Constraint *Config.Constraint_t) {
+						_, ok := Config.GetAutomation(id)
+						for ok {
+							<-Constraint.Cron_Parsed.Reset_Timer.C
+							_, ok := Config.GetAutomation(id)
+							if ok {
+								Constraint.Mutex.Lock()
+								defer Constraint.Mutex.Unlock()
+								setTriggered(id, Constraint, false)
+							} else {
+								break
 							}
-							setTriggered(Automation_c, Constraint_c, false)
 						}
-					}()
+					}(id, Constraint)
 				}
 
 				// Add Cron Trigger
-				Constraint.Cron_Parsed.NextTime = Constraint.Cron_Parsed.Expression.Next(time.Now().In(Config.Config.Timezone_parsed))
-				Constraint.Cron_Parsed.Cron_Timer = time.NewTimer(Constraint.Cron_Parsed.NextTime.Sub(time.Now().In(Config.Config.Timezone_parsed)))
-				go func() {
-					Automation_c := Automation
-					Constraint_c := Constraint
-					for {
+				Constraint.Cron_Parsed.NextTime = Constraint.Cron_Parsed.Expression.Next(time.Now().In(Config.GetConfigFile().Timezone_parsed))
+				Constraint.Cron_Parsed.Cron_Timer = time.NewTimer(Constraint.Cron_Parsed.NextTime.Sub(time.Now().In(Config.GetConfigFile().Timezone_parsed)))
+				go func(id uint64, Constraint *Config.Constraint_t) {
+					_, ok := Config.GetAutomation(id)
+					for ok {
 						<-Constraint.Cron_Parsed.Cron_Timer.C
-						if !Constraint_c.Initialized {
-							Constraint_c.Cron_Parsed.Cron_Timer.Stop()
-							return
-						}
-						setTriggered(Automation_c, Constraint_c, true)
-						Constraint.Cron_Parsed.NextTime = Constraint.Cron_Parsed.Expression.Next(time.Now().In(Config.Config.Timezone_parsed))
-						Constraint.Cron_Parsed.Cron_Timer.Reset(Constraint.Cron_Parsed.NextTime.Sub(time.Now().In(Config.Config.Timezone_parsed)))
-						// Reset immediately if no Reset timer defined
-						if Constraint.Cron_Parsed.Reset == 0 {
-							setTriggered(Automation_c, Constraint_c, false)
+						_, ok := Config.GetAutomation(id)
+						if ok {
+							Constraint.Mutex.Lock()
+							defer Constraint.Mutex.Unlock()
+							setTriggered(id, Constraint, true)
+							Constraint.Cron_Parsed.NextTime = Constraint.Cron_Parsed.Expression.Next(time.Now().In(Config.GetConfigFile().Timezone_parsed))
+							Constraint.Cron_Parsed.Cron_Timer.Reset(Constraint.Cron_Parsed.NextTime.Sub(time.Now().In(Config.GetConfigFile().Timezone_parsed)))
+							// Reset immediately if no Reset timer defined
+							if Constraint.Cron_Parsed.Reset == 0 {
+								setTriggered(id, Constraint, false)
+							}
+						} else {
+							break
 						}
 					}
-				}()
+				}(id, Constraint)
 
 			}
 
@@ -73,11 +75,9 @@ func Deploy() {
 
 	}
 
-	log.Info("[CRON] Initializiation completed!")
-
 }
 
-func setTriggered(Automation *Config.Automation_t, Constraint *Config.Constraint_t, triggered bool) {
+func setTriggered(id uint64, Constraint *Config.Constraint_t, triggered bool) {
 
 	if triggered {
 
@@ -94,6 +94,6 @@ func setTriggered(Automation *Config.Automation_t, Constraint *Config.Constraint
 	Constraint.Triggered = triggered
 
 	// CheckTriggered
-	Config.CheckTriggered(Automation, Constraint.Mqtt_Parsed.NoTrigger)
+	go Config.CheckTriggered(id, Constraint.Mqtt_Parsed.NoTrigger)
 
 }

@@ -1,8 +1,8 @@
 <html>
     <head>
-        <title>{{.Config.Name}}</title>
+        <title>{{.ConfigFile.Name}}</title>
         <meta http-equiv="refresh" content="1">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="viewport" content="width=1200px, initial-scale=1.0">
         <link rel="stylesheet" href="bootstrap.min.css">
         <style>
             * {
@@ -28,7 +28,8 @@
 
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
             <div class="container-fluid ">
-                <a class="navbar-brand" href="/">{{.Config.Name}}</a>
+                <a class="navbar-brand" href="/">{{.ConfigFile.Name}}</a>
+                <a class="navbar-brand">{{.LocalTime}}</a>
             </div>
         </nav>
 
@@ -45,34 +46,34 @@
         </div>
 
         <div class="container-fluid p-4">
-            {{range .Config.Automations}}
-                {{if not .Hidden }} 
+            {{ range $key, $automation := .Automations }}
+                {{if not $automation.Hidden }} 
                     <div class="card mb-4" style="border:1px black solid">
                         <div class="card-header bg-dark p-2 border-2 {{if or (.Triggered) (.Triggered_Time | range2s) }} border-success {{else}} border-danger {{end}}" style="border-radius:0;">
-                            <span class="badge {{if .Triggered_Time | range2s }} bg-warning {{ else }} bg-info {{ end }}">{{.Triggered_Time | diff }}</span>
+                            <span class="badge {{if $automation.Triggered_Time | range2s }} bg-warning {{ else }} bg-info {{ end }}">{{.Triggered_Time | diff }}</span>
                             <span class="badge bg-info" >{{.Mode}}</span>
-                            {{ if .Retrigger  }} <span class="badge bg-success">Retrigger</span> {{end}}
+                            {{ if $automation.Retrigger  }} <span class="badge bg-success">Retrigger</span> {{end}}
                             <span style="font-size:11pt !important">{{.Name}}</span>
-                            <span style="float:right" class="text-muted"> {{.File}}</span>
+                            <span style="float:right" class="text-muted">[ID:{{$key}}] {{.File}}</span>
                             <table class="table text-left border-none table-borderless m-0 mt-2">
                                 <tr>
-                                    <td>Triggered <span class="badge bg-info">{{ .Triggered_Time | diff }}</span></td>
+                                    <td>Triggered <span class="badge bg-info">{{ $automation.Triggered_Time | diff }}</span></td>
                                     <td>Pause</td>
                                     <td>Reminder</td>
                                     <td>Delay</td>
-                                    <td>Value <span class="badge bg-info">{{ .Value_Time | diff }}</span></td>
+                                    <td>Value <span class="badge bg-info">{{ $automation.Value_Time | diff }}</span></td>
                                 </tr>
                                 <tr>
-                                    <td class="{{if .Triggered_Time | range2s }} bg-warning {{ end }}" >{{.Triggered}}</td>
-                                    <td class="{{if . | automationInPause }} bg-warning {{ end }}" >{{.Pause}}</td>
-                                    <td class="{{if .Reminder_Active }} bg-warning {{ end }}" >{{.Reminder}}</td>
-                                    <td class="{{if .Delay_Active }} bg-warning {{ end }}" > {{.Delay}}</td>
-                                    <td class="{{if .Value_Time | range2s }} bg-warning {{ end }}" >{{.Value}}</td>
+                                    <td class="{{if $automation.Triggered_Time | range2s }} bg-warning {{ end }}" >{{.Triggered}}</td>
+                                    <td class="{{if $automation | automationInPause }} bg-warning {{ end }}" >{{.Pause}}</td>
+                                    <td class="{{if $automation.Reminder_Active }} bg-warning {{ end }}" >{{.Reminder}}</td>
+                                    <td class="{{if $automation.Delay_Active }} bg-warning {{ end }}" > {{.Delay}}</td>
+                                    <td class="{{if $automation.Value_Time | range2s }} bg-warning {{ end }}" >{{.Value}}</td>
                                 </tr>
                             </table>
                         </div>
                         <div class="card-body bg-secondary p-2">
-                            {{if . | automationHaveConstraintMqtt }} 
+                            {{if $automation | automationHaveConstraintMqtt }} 
                                 <table class="table bg-dark table-border-show table-bordered m-0 mt-1">
                                     <tr>
                                         <td><b>MQTT Constraints</b> - Topic</td>
@@ -85,7 +86,7 @@
                                         <td>Value</td>
                                         <td>Options</td>
                                     </tr>
-                                    {{range .Constraints}}
+                                    {{range $automation.Constraints}}
                                         {{if .Mqtt}}
                                             <tr class="{{if or (.Triggered) (.Triggered_Time | range2s) }} bg-success {{ end }}" >
                                                 <td>{{.Mqtt_Parsed.Topic}}</td>
@@ -94,8 +95,8 @@
                                                 <td>{{.Mqtt_Parsed.Value}}</td>
                                                 <td>{{.Mqtt_Parsed.Reset}}</td>
                                                 <td>{{.Mqtt_Parsed.Timeout}}</td>
-                                                <td class="{{if .Triggered_Time | range2s }}  bg-warning {{ end }}" >{{.Triggered}} <span class="badge bg-info">{{.Triggered_Time | diff }}</span></td>
-                                                <td class="{{if .Value_Time | range2s }} bg-warning {{ end }}" >{{.Value}} <span class="badge bg-info">{{.Value_Time | diff }}</span></td>
+                                                <td class="{{if $automation.Triggered_Time | range2s }}  bg-warning {{ end }}" >{{.Triggered}} <span class="badge bg-info">{{.Triggered_Time | diff }}</span></td>
+                                                <td class="{{if $automation.Value_Time | range2s }} bg-warning {{ end }}" >{{.Value}} <span class="badge bg-info">{{.Value_Time | diff }}</span></td>
                                                 <td>
                                                     {{ if .Mqtt_Parsed.BlockRetained  }} <span class="badge bg-warning">BlockRetained</span> {{end}}
                                                     {{ if .Mqtt_Parsed.NoTrigger  }} <span class="badge bg-warning">NoTrigger</span> {{end}}
@@ -107,7 +108,7 @@
                                 </table>
                             {{end}}
 
-                            {{if . | automationHaveConstraintCron }} 
+                            {{if $automation | automationHaveConstraintCron }} 
                                 <table class="table bg-dark table-border-show m-0 mt-1">
                                     <tr>
                                         <td><b>CRON Constraints</b> - NextTime</td>
@@ -115,7 +116,7 @@
                                         <td>Triggered</td>
                                         <td>Options</td>
                                     </tr>
-                                    {{range .Constraints}}
+                                    {{range $automation.Constraints}}
                                         {{if .Cron}}
                                             <tr class="{{if or (.Triggered) (.Triggered_Time | range2s) }} bg-success {{ end }}" >
                                                 <td>{{.Cron_Parsed.NextTime}}</td>
@@ -132,7 +133,7 @@
 
                             <hr >
 
-                            {{if . | automationHaveActionMqtt }} 
+                            {{if $automation | automationHaveActionMqtt }} 
                                 <table class="table bg-dark table-border-show m-0 mt-1">
                                     <tr>
                                         <td><b>MQTT Actions</b> - Topic</td>
@@ -140,7 +141,7 @@
                                         <td>Value</td>
                                         <td>Options</td>
                                     </tr>
-                                    {{range .Actions}}
+                                    {{range $automation.Actions}}
                                         {{if .Mqtt}}
                                             <tr class="{{if or (.Triggered) (.Triggered_Time | range2s) }} bg-success {{ end }}" >
                                                 <td>{{.Mqtt_Parsed.Topic}}</td>
@@ -155,12 +156,12 @@
                                 </table>
                             {{end}}
 
-                            {{if . | automationHaveActionHttp }} 
+                            {{if $automation | automationHaveActionHttp }} 
                                 <table class="table bg-dark table-border-show m-0 mt-1">
                                     <tr>
                                         <td><b>HTTP Actions</b> - URL</td>
                                     </tr>
-                                    {{range .Actions}}
+                                    {{range $automation.Actions}}
                                         {{if .Http}}
                                             <tr class="{{if or (.Triggered) (.Triggered_Time | range2s ) }} bg-success {{ end }}" >
                                                 <td>{{.Http}}</td>
@@ -169,7 +170,6 @@
                                     {{end}}
                                 </table>
                             {{ end }}
-
                            
 
                         </div>    

@@ -14,19 +14,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-/*
-type subscription_t struct {
-	Topic      string
-	Comparator string
-	Value      string
-	Reset      uint
-	Timeout    uint
-	NoTrigger  bool
-	Retained   bool
-	Error      error
-}
-*/
-
 var Client MQTT.Client
 
 //define a function for the default message handler
@@ -35,28 +22,30 @@ var DefaultPublishHandler MQTT.MessageHandler = func(client MQTT.Client, msg MQT
 	//fmt.Printf("MSG: %s\n", msg.Payload())
 
 	// Find matching topics
-	for Automation_k := range Config.Config.Automations {
-		Automation := &Config.Config.Automations[Automation_k]
+	for id, Automation := range Config.GetAutomations() {
 
 		// Find matching topics
 		for Constraint_k := range Automation.Constraints {
+			Automation.Constraints[Constraint_k].Mutex.Lock()
+			defer Automation.Constraints[Constraint_k].Mutex.Unlock()
 			Constraint := &Automation.Constraints[Constraint_k]
 			if Constraint.Mqtt != "" && Constraint.Mqtt_Parsed.Topic == msg.Topic() {
-				onMessage(Automation, Constraint, client, msg)
+				onMessage(id, Constraint, client, msg)
 			}
 		}
 
 	}
+
 }
 
 func Connect() {
 
-	log.Infof("[MQTT] Connecting to MQTT Server: %s", Config.Config.MqttUri)
+	log.Infof("[MQTT] Connecting to MQTT Server: %s", Config.GetConfigFile().MqttUri)
 
 	// Create Client
 	opts := MQTT.NewClientOptions()
-	opts.AddBroker(Config.Config.MqttUri)
-	opts.SetClientID(Config.Config.Name)
+	opts.AddBroker(Config.GetConfigFile().MqttUri)
+	opts.SetClientID(Config.GetConfigFile().Name)
 
 	// Set Reconnect
 	opts.SetKeepAlive(5 * time.Second)
@@ -71,8 +60,11 @@ func Connect() {
 	opts.SetOnConnectHandler(func(c MQTT.Client) {
 		log.Info("[MQTT] Successfully connected to MQTT server! send subscriptions again")
 		// Resubscripe
-		for _, Automation := range Config.Config.Automations {
-			for _, Constraint := range Automation.Constraints {
+		for _, Automation := range Config.GetAutomations() {
+			for Constraint_k := range Automation.Constraints {
+				Automation.Constraints[Constraint_k].Mutex.Lock()
+				defer Automation.Constraints[Constraint_k].Mutex.Unlock()
+				Constraint := &Automation.Constraints[Constraint_k]
 				if Constraint.Mqtt != "" && Constraint.Initialized {
 					Constraint.Mqtt_Parsed.Token = Client.Subscribe(Constraint.Mqtt_Parsed.Topic, 2, nil)
 				}
@@ -99,13 +91,12 @@ func Connect() {
 // Init Constraints and Actions
 func Deploy() {
 
-	log.Info("[MQTT] Initialize Constraints and Actions")
-
-	for Automation_k := range Config.Config.Automations {
-		Automation := &Config.Config.Automations[Automation_k]
+	for id, Automation := range Config.GetAutomations() {
 
 		// Setup Constraints
 		for Constraint_k := range Automation.Constraints {
+			Automation.Constraints[Constraint_k].Mutex.Lock()
+			defer Automation.Constraints[Constraint_k].Mutex.Unlock()
 			Constraint := &Automation.Constraints[Constraint_k]
 
 			if Constraint.Mqtt != "" && !Constraint.Initialized {
@@ -151,35 +142,39 @@ func Deploy() {
 					if Constraint.Mqtt_Parsed.Reset > 0 {
 						Constraint.Mqtt_Parsed.Reset_Timer = time.NewTimer(Constraint.Mqtt_Parsed.Reset)
 						Constraint.Mqtt_Parsed.Reset_Timer.Stop()
-						go func() {
-							Constraint_c := Constraint
-							Automation_c := Automation
-							for {
-								<-Constraint_c.Mqtt_Parsed.Reset_Timer.C
-								if !Constraint_c.Initialized {
-									Constraint_c.Mqtt_Parsed.Reset_Timer.Stop()
-									return
+						go func(id uint64, Constraint *Config.Constraint_t) {
+							_, ok := Config.GetAutomation(id)
+							for ok {
+								<-Constraint.Mqtt_Parsed.Reset_Timer.C
+								_, ok := Config.GetAutomation(id)
+								if ok {
+									Constraint.Mutex.Lock()
+									setTriggered(id, Constraint, false)
+									Constraint.Mutex.Unlock()
+								} else {
+									break
 								}
-								setTriggered(Automation_c, Constraint_c, false)
 							}
-						}()
+						}(id, Constraint)
 					}
 
 					// Add Timeout Ticker
 					if Constraint.Mqtt_Parsed.Timeout > 0 {
 						Constraint.Mqtt_Parsed.Timeout_Ticker = time.NewTicker(Constraint.Mqtt_Parsed.Timeout)
-						go func() {
-							Constraint_c := Constraint
-							Automation_c := Automation
-							for {
-								<-Constraint_c.Mqtt_Parsed.Timeout_Ticker.C
-								if !Constraint_c.Initialized {
-									Constraint_c.Mqtt_Parsed.Timeout_Ticker.Stop()
-									return
+						go func(id uint64, Constraint *Config.Constraint_t) {
+							_, ok := Config.GetAutomation(id)
+							for ok {
+								<-Constraint.Mqtt_Parsed.Timeout_Ticker.C
+								_, ok := Config.GetAutomation(id)
+								if ok {
+									Constraint.Mutex.Lock()
+									setTriggered(id, Constraint, true)
+									Constraint.Mutex.Unlock()
+								} else {
+									break
 								}
-								setTriggered(Automation_c, Constraint_c, true)
 							}
-						}()
+						}(id, Constraint)
 					}
 
 				}
@@ -189,10 +184,13 @@ func Deploy() {
 		}
 
 		// Setup Actions
-		for Actions_k := range Automation.Actions {
-			Action := &Automation.Actions[Actions_k]
+		for Action_k := range Automation.Actions {
+			Automation.Actions[Action_k].Mutex.Lock()
+			defer Automation.Actions[Action_k].Mutex.Unlock()
+			Action := &Automation.Actions[Action_k]
 
-			if Action.Mqtt != "" {
+			if Action.Mqtt != "" && !Action.Initialized {
+				Action.Initialized = true
 
 				match := regexp.MustCompile(`^\s*(?P<Topic>[^\.\s]*)(?:\.(?P<Object>\S*))?(?:\s+(?P<Comparator>[^-][\S]*))?(?:\s+"(?P<Value_String>.*)")?(?:\s+(?P<Value_Float>(?:-[0-9.]+)|(?:[^-][\S]*)))?.*$`).FindStringSubmatch(Action.Mqtt)
 
@@ -225,17 +223,15 @@ func Deploy() {
 					Action.Mqtt_Parsed.Retained, _ = strconv.ParseBool(Config.Find(`-Retained\s+(\S+)`, Action.Mqtt))
 
 					// Setup Trigger Handler
-					Action.Trigger = func() {
-						Automation_c := Automation
-						Action_c := Action
+					Action.Trigger = func(Automation Config.Automation_t, Action *Config.Action_t) {
 						var payload string
-						tmpl, err := template.New("value").Parse(Action_c.Mqtt_Parsed.Value)
+						tmpl, err := template.New("value").Parse(Action.Mqtt_Parsed.Value)
 						if err != nil {
 							log.Errorf("[MQTT] error while parsing Template: %s", err)
 						} else {
 							var buf bytes.Buffer
-							tmpl.Execute(&buf, Automation_c)
-							if Action_c.Mqtt_Parsed.Object != "" {
+							tmpl.Execute(&buf, Automation)
+							if Action.Mqtt_Parsed.Object != "" {
 								if Action.Mqtt_Parsed.IsString {
 									payload = fmt.Sprintf("{\"%s\":\"%s\"}", Action.Mqtt_Parsed.Object, buf.String())
 								} else {
@@ -245,7 +241,7 @@ func Deploy() {
 								payload = buf.String()
 							}
 							// Publish
-							Client.Publish(Action_c.Mqtt_Parsed.Topic, 2, Action_c.Mqtt_Parsed.Retained, payload)
+							Client.Publish(Action.Mqtt_Parsed.Topic, 2, Action.Mqtt_Parsed.Retained, payload)
 						}
 
 					}
@@ -258,11 +254,9 @@ func Deploy() {
 
 	}
 
-	log.Info("[MQTT] Initializiation completed!")
-
 }
 
-func onMessage(Automation *Config.Automation_t, Constraint *Config.Constraint_t, client MQTT.Client, msg MQTT.Message) {
+func onMessage(id uint64, Constraint *Config.Constraint_t, client MQTT.Client, msg MQTT.Message) {
 
 	// Debug
 	// fmt.Printf("%s\n", msg.Payload())
@@ -287,11 +281,10 @@ func onMessage(Automation *Config.Automation_t, Constraint *Config.Constraint_t,
 		// Don't set Automations value to Constraint value
 		if !Constraint.Mqtt_Parsed.NoValue {
 			if err == nil {
-				Automation.Value = parsed
+				Config.SetValue(id, parsed)
 			} else {
-				Automation.Value = string(msg.Payload())
+				Config.SetValue(id, string(msg.Payload()))
 			}
-			Automation.Value_Time = time.Now()
 		}
 
 	}
@@ -309,8 +302,7 @@ func onMessage(Automation *Config.Automation_t, Constraint *Config.Constraint_t,
 		Constraint.Value_Time = time.Now()
 		// Don't set Automations value to Constraint value
 		if !Constraint.Mqtt_Parsed.NoValue {
-			Automation.Value = jsonMap[Constraint.Mqtt_Parsed.Object]
-			Automation.Value_Time = time.Now()
+			Config.SetValue(id, jsonMap[Constraint.Mqtt_Parsed.Object])
 		}
 
 	}
@@ -322,8 +314,8 @@ func onMessage(Automation *Config.Automation_t, Constraint *Config.Constraint_t,
 
 	// Rules
 	if Constraint.Mqtt_Parsed.Comparator == "" && Constraint.Mqtt_Parsed.Timeout == 0 {
-		setTriggered(Automation, Constraint, true)
-		setTriggered(Automation, Constraint, false)
+		setTriggered(id, Constraint, true)
+		setTriggered(id, Constraint, false)
 	} else {
 		switch Constraint.Value.(type) {
 		case float64:
@@ -332,24 +324,24 @@ func onMessage(Automation *Config.Automation_t, Constraint *Config.Constraint_t,
 				v1 := Constraint.Value.(float64)
 				v2 := Constraint.Mqtt_Parsed.Value.(float64)
 				if Constraint.Mqtt_Parsed.Comparator == "=" && v1 == v2 {
-					setTriggered(Automation, Constraint, true)
+					setTriggered(id, Constraint, true)
 				} else if Constraint.Mqtt_Parsed.Comparator == "==" && v1 == v2 {
-					setTriggered(Automation, Constraint, true)
+					setTriggered(id, Constraint, true)
 				} else if Constraint.Mqtt_Parsed.Comparator == "!=" && v1 != v2 {
-					setTriggered(Automation, Constraint, true)
+					setTriggered(id, Constraint, true)
 				} else if Constraint.Mqtt_Parsed.Comparator == ">=" && v1 >= v2 {
-					setTriggered(Automation, Constraint, true)
+					setTriggered(id, Constraint, true)
 				} else if Constraint.Mqtt_Parsed.Comparator == "<=" && v1 <= v2 {
-					setTriggered(Automation, Constraint, true)
+					setTriggered(id, Constraint, true)
 				} else if Constraint.Mqtt_Parsed.Comparator == "<" && v1 < v2 {
-					setTriggered(Automation, Constraint, true)
+					setTriggered(id, Constraint, true)
 				} else if Constraint.Mqtt_Parsed.Comparator == ">" && v1 > v2 {
-					setTriggered(Automation, Constraint, true)
+					setTriggered(id, Constraint, true)
 				} else {
-					setTriggered(Automation, Constraint, false)
+					setTriggered(id, Constraint, false)
 				}
 			default:
-				setTriggered(Automation, Constraint, Constraint.Mqtt_Parsed.Comparator == "!=")
+				setTriggered(id, Constraint, Constraint.Mqtt_Parsed.Comparator == "!=")
 			}
 		case string:
 			switch Constraint.Mqtt_Parsed.Value.(type) {
@@ -359,16 +351,16 @@ func onMessage(Automation *Config.Automation_t, Constraint *Config.Constraint_t,
 					log.Error("[MQTT] Error while comparing constraints value: ", err)
 				}
 				if Constraint.Mqtt_Parsed.Comparator == "=" && match {
-					setTriggered(Automation, Constraint, true)
+					setTriggered(id, Constraint, true)
 				} else if Constraint.Mqtt_Parsed.Comparator == "==" && match {
-					setTriggered(Automation, Constraint, true)
+					setTriggered(id, Constraint, true)
 				} else if Constraint.Mqtt_Parsed.Comparator == "!=" && !match {
-					setTriggered(Automation, Constraint, true)
+					setTriggered(id, Constraint, true)
 				} else {
-					setTriggered(Automation, Constraint, false)
+					setTriggered(id, Constraint, false)
 				}
 			default:
-				setTriggered(Automation, Constraint, Constraint.Mqtt_Parsed.Comparator == "!=")
+				setTriggered(id, Constraint, Constraint.Mqtt_Parsed.Comparator == "!=")
 			}
 		}
 	}
@@ -381,7 +373,7 @@ func onMessage(Automation *Config.Automation_t, Constraint *Config.Constraint_t,
 
 }
 
-func setTriggered(Automation *Config.Automation_t, Constraint *Config.Constraint_t, triggered bool) {
+func setTriggered(id uint64, Constraint *Config.Constraint_t, triggered bool) {
 
 	if triggered {
 
@@ -398,6 +390,6 @@ func setTriggered(Automation *Config.Automation_t, Constraint *Config.Constraint
 	Constraint.Triggered = triggered
 
 	// CheckTriggered
-	Config.CheckTriggered(Automation, Constraint.Mqtt_Parsed.NoTrigger)
+	go Config.CheckTriggered(id, Constraint.Mqtt_Parsed.NoTrigger)
 
 }

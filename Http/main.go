@@ -5,31 +5,25 @@ import (
 	"bytes"
 	"html/template"
 	"net/http"
-
-	log "github.com/sirupsen/logrus"
 )
 
 func Deploy() {
 
-	log.Info("[HTTP] Initialize Constraints and Actions")
-
-	for Automation_k := range Config.Config.Automations {
-		Automation := &Config.Config.Automations[Automation_k]
+	for _, Automation := range Config.GetAutomations() {
 
 		// Setup Actions
-		for Actions_k := range Automation.Actions {
-			Action := &Automation.Actions[Actions_k]
+		for Action_k := range Automation.Actions {
+			Automation.Actions[Action_k].Mutex.Lock()
+			defer Automation.Actions[Action_k].Mutex.Unlock()
 
+			Action := &Automation.Actions[Action_k]
 			if Action.Http != "" && !Action.Initialized {
 				Action.Initialized = true
-
 				// Setup Trigger Handler
-				Action.Trigger = func() {
-					Automation_c := Automation
-					Action_c := Action
-					tmpl, _ := template.New("value").Parse(Action_c.Http)
+				Action.Trigger = func(Automation Config.Automation_t, Action *Config.Action_t) {
+					tmpl, _ := template.New("value").Parse(Action.Http)
 					var buf bytes.Buffer
-					tmpl.Execute(&buf, Automation_c)
+					tmpl.Execute(&buf, Automation)
 					http.Get(buf.String())
 				}
 
@@ -38,7 +32,5 @@ func Deploy() {
 		}
 
 	}
-
-	log.Info("[HTTP] Initializiation completed!")
 
 }
