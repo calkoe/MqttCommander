@@ -21,34 +21,39 @@ var DefaultPublishHandler MQTT.MessageHandler = func(client MQTT.Client, msg MQT
 	//fmt.Printf("TOPIC: %s\n", msg.Topic())
 	//fmt.Printf("MSG: %s\n", msg.Payload())
 
-	// Find matching topics
-	for id, Automation := range Config.GetAutomations() {
+	go func() {
 
 		// Find matching topics
-		for Constraint_k := range Automation.Constraints {
-			Automation.Constraints[Constraint_k].Mutex.Lock()
-			defer Automation.Constraints[Constraint_k].Mutex.Unlock()
-			Constraint := &Automation.Constraints[Constraint_k]
-			if Constraint.Mqtt != "" && Constraint.Mqtt_Parsed.Topic == msg.Topic() {
-				onMessage(id, Constraint, client, msg)
+		for id, AutomationCopy := range Config.CopyAutomations() {
+			for Constraint_k := range AutomationCopy.Constraints {
+
+				ConstraintCopy := Config.CopyConstraint(&AutomationCopy.Constraints[Constraint_k])
+				if ConstraintCopy.Mqtt != "" && ConstraintCopy.Mqtt_Parsed.Topic == msg.Topic() {
+					OnMessage(id, &AutomationCopy.Constraints[Constraint_k], client, msg)
+				}
+
 			}
 		}
 
-	}
+	}()
 
 }
 
 func Connect() {
 
-	log.Infof("[MQTT] Connecting to MQTT Server: %s", Config.GetConfigFile().MqttUri)
+	ConfigFileCopy := Config.CopyConfigFile()
+
+	log.Infof("[MQTT] Connecting to MQTT Server: %s", Config.CopyConfigFile().MqttUri)
 
 	// Create Client
 	opts := MQTT.NewClientOptions()
-	opts.AddBroker(Config.GetConfigFile().MqttUri)
-	opts.SetClientID(Config.GetConfigFile().Name)
+	opts.AddBroker(ConfigFileCopy.MqttUri)
+	opts.SetClientID(ConfigFileCopy.Name)
 
 	// Set Reconnect
 	opts.SetKeepAlive(5 * time.Second)
+	opts.SetPingTimeout(5 * time.Second)
+	opts.SetResumeSubs(true)
 	opts.SetCleanSession(true)
 	opts.SetConnectRetry(true)
 	opts.SetConnectRetryInterval(10 * time.Second)
@@ -60,13 +65,11 @@ func Connect() {
 	opts.SetOnConnectHandler(func(c MQTT.Client) {
 		log.Info("[MQTT] Successfully connected to MQTT server! send subscriptions again")
 		// Resubscripe
-		for _, Automation := range Config.GetAutomations() {
-			for Constraint_k := range Automation.Constraints {
-				Automation.Constraints[Constraint_k].Mutex.Lock()
-				defer Automation.Constraints[Constraint_k].Mutex.Unlock()
-				Constraint := &Automation.Constraints[Constraint_k]
-				if Constraint.Mqtt != "" && Constraint.Initialized {
-					Constraint.Mqtt_Parsed.Token = Client.Subscribe(Constraint.Mqtt_Parsed.Topic, 2, nil)
+		for _, AutomationCopy := range Config.CopyAutomations() {
+			for Constraint_k := range AutomationCopy.Constraints {
+				ConstraintCopy := Config.CopyConstraint(&AutomationCopy.Constraints[Constraint_k])
+				if ConstraintCopy.Mqtt != "" && ConstraintCopy.Initialized {
+					ConstraintCopy.Mqtt_Parsed.Token = Client.Subscribe(ConstraintCopy.Mqtt_Parsed.Topic, 2, nil)
 				}
 			}
 		}
@@ -91,15 +94,17 @@ func Connect() {
 // Init Constraints and Actions
 func Deploy() {
 
-	for id, Automation := range Config.GetAutomations() {
+	for id, AutomationCopy := range Config.CopyAutomations() {
 
 		// Setup Constraints
-		for Constraint_k := range Automation.Constraints {
-			Automation.Constraints[Constraint_k].Mutex.Lock()
-			defer Automation.Constraints[Constraint_k].Mutex.Unlock()
-			Constraint := &Automation.Constraints[Constraint_k]
+		for Constraint_k := range AutomationCopy.Constraints {
 
-			if Constraint.Mqtt != "" && !Constraint.Initialized {
+			ConstraintCopy := Config.CopyConstraint(&AutomationCopy.Constraints[Constraint_k])
+			if ConstraintCopy.Mqtt != "" && !ConstraintCopy.Initialized {
+
+				AutomationCopy.Constraints[Constraint_k].Mutex.Lock()
+				Constraint := &AutomationCopy.Constraints[Constraint_k]
+
 				Constraint.Initialized = true
 
 				match := regexp.MustCompile(`^\s*(?P<Topic>[^\.\s]*)(?:\.(?P<Object>\S*))?(?:\s+(?P<Comparator>[^-][\S]*))?(?:\s+"(?P<Value_String>.*)")?(?:\s+(?P<Value_Float>(?:-[0-9.]+)|(?:[^-][\S]*)))?.*$`).FindStringSubmatch(Constraint.Mqtt)
@@ -142,11 +147,11 @@ func Deploy() {
 					if Constraint.Mqtt_Parsed.Reset > 0 {
 						Constraint.Mqtt_Parsed.Reset_Timer = time.NewTimer(Constraint.Mqtt_Parsed.Reset)
 						Constraint.Mqtt_Parsed.Reset_Timer.Stop()
-						go func(id uint64, Constraint *Config.Constraint_t) {
-							_, ok := Config.GetAutomation(id)
+						go func(id int, Constraint *Config.Constraint_t) {
+							_, ok := Config.CopyAutomation(id)
 							for ok {
 								<-Constraint.Mqtt_Parsed.Reset_Timer.C
-								_, ok := Config.GetAutomation(id)
+								_, ok := Config.CopyAutomation(id)
 								if ok {
 									Constraint.Mutex.Lock()
 									setTriggered(id, Constraint, false)
@@ -161,11 +166,11 @@ func Deploy() {
 					// Add Timeout Ticker
 					if Constraint.Mqtt_Parsed.Timeout > 0 {
 						Constraint.Mqtt_Parsed.Timeout_Ticker = time.NewTicker(Constraint.Mqtt_Parsed.Timeout)
-						go func(id uint64, Constraint *Config.Constraint_t) {
-							_, ok := Config.GetAutomation(id)
+						go func(id int, Constraint *Config.Constraint_t) {
+							_, ok := Config.CopyAutomation(id)
 							for ok {
 								<-Constraint.Mqtt_Parsed.Timeout_Ticker.C
-								_, ok := Config.GetAutomation(id)
+								_, ok := Config.CopyAutomation(id)
 								if ok {
 									Constraint.Mutex.Lock()
 									setTriggered(id, Constraint, true)
@@ -179,17 +184,21 @@ func Deploy() {
 
 				}
 
+				AutomationCopy.Constraints[Constraint_k].Mutex.Unlock()
+
 			}
 
 		}
 
 		// Setup Actions
-		for Action_k := range Automation.Actions {
-			Automation.Actions[Action_k].Mutex.Lock()
-			defer Automation.Actions[Action_k].Mutex.Unlock()
-			Action := &Automation.Actions[Action_k]
+		for Action_k := range AutomationCopy.Actions {
 
-			if Action.Mqtt != "" && !Action.Initialized {
+			ActionCopy := Config.CopyAction(&AutomationCopy.Actions[Action_k])
+			if ActionCopy.Mqtt != "" && !ActionCopy.Initialized {
+
+				AutomationCopy.Actions[Action_k].Mutex.Lock()
+				Action := &AutomationCopy.Actions[Action_k]
+
 				Action.Initialized = true
 
 				match := regexp.MustCompile(`^\s*(?P<Topic>[^\.\s]*)(?:\.(?P<Object>\S*))?(?:\s+(?P<Comparator>[^-][\S]*))?(?:\s+"(?P<Value_String>.*)")?(?:\s+(?P<Value_Float>(?:-[0-9.]+)|(?:[^-][\S]*)))?.*$`).FindStringSubmatch(Action.Mqtt)
@@ -223,30 +232,32 @@ func Deploy() {
 					Action.Mqtt_Parsed.Retained, _ = strconv.ParseBool(Config.Find(`-Retained\s+(\S+)`, Action.Mqtt))
 
 					// Setup Trigger Handler
-					Action.Trigger = func(Automation Config.Automation_t, Action *Config.Action_t) {
+					Action.Trigger = func(AutomationCopy Config.Automation_t, ActionCopy Config.Action_t) {
 						var payload string
-						tmpl, err := template.New("value").Parse(Action.Mqtt_Parsed.Value)
+						tmpl, err := template.New("value").Parse(ActionCopy.Mqtt_Parsed.Value)
 						if err != nil {
 							log.Errorf("[MQTT] error while parsing Template: %s", err)
 						} else {
 							var buf bytes.Buffer
-							tmpl.Execute(&buf, Automation)
-							if Action.Mqtt_Parsed.Object != "" {
-								if Action.Mqtt_Parsed.IsString {
-									payload = fmt.Sprintf("{\"%s\":\"%s\"}", Action.Mqtt_Parsed.Object, buf.String())
+							tmpl.Execute(&buf, AutomationCopy)
+							if ActionCopy.Mqtt_Parsed.Object != "" {
+								if ActionCopy.Mqtt_Parsed.IsString {
+									payload = fmt.Sprintf("{\"%s\":\"%s\"}", ActionCopy.Mqtt_Parsed.Object, buf.String())
 								} else {
-									payload = fmt.Sprintf("{\"%s\":%s}", Action.Mqtt_Parsed.Object, buf.String())
+									payload = fmt.Sprintf("{\"%s\":%s}", ActionCopy.Mqtt_Parsed.Object, buf.String())
 								}
 							} else {
 								payload = buf.String()
 							}
 							// Publish
-							Client.Publish(Action.Mqtt_Parsed.Topic, 2, Action.Mqtt_Parsed.Retained, payload)
+							Client.Publish(ActionCopy.Mqtt_Parsed.Topic, 2, ActionCopy.Mqtt_Parsed.Retained, payload)
 						}
 
 					}
 
 				}
+
+				AutomationCopy.Actions[Action_k].Mutex.Unlock()
 
 			}
 
@@ -256,10 +267,13 @@ func Deploy() {
 
 }
 
-func onMessage(id uint64, Constraint *Config.Constraint_t, client MQTT.Client, msg MQTT.Message) {
+func OnMessage(id int, Constraint *Config.Constraint_t, client MQTT.Client, msg MQTT.Message) {
 
 	// Debug
 	// fmt.Printf("%s\n", msg.Payload())
+
+	Constraint.Mutex.Lock()
+	defer Constraint.Mutex.Unlock()
 
 	// Block Retained
 	if Constraint.Mqtt_Parsed.BlockRetained && msg.Retained() {
@@ -373,7 +387,7 @@ func onMessage(id uint64, Constraint *Config.Constraint_t, client MQTT.Client, m
 
 }
 
-func setTriggered(id uint64, Constraint *Config.Constraint_t, triggered bool) {
+func setTriggered(id int, Constraint *Config.Constraint_t, triggered bool) {
 
 	if triggered {
 

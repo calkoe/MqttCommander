@@ -10,15 +10,19 @@ import (
 
 func Deploy() {
 
-	for id, Automation := range Config.GetAutomations() {
+	ConfigFileCopy := Config.CopyConfigFile()
+
+	for id, AutomationCopy := range Config.CopyAutomations() {
 
 		// Setup Constraints
-		for Constraint_k := range Automation.Constraints {
-			Automation.Constraints[Constraint_k].Mutex.Lock()
-			defer Automation.Constraints[Constraint_k].Mutex.Unlock()
-			Constraint := &Automation.Constraints[Constraint_k]
+		for Constraint_k := range AutomationCopy.Constraints {
 
-			if Constraint.Cron != "" && !Constraint.Initialized {
+			ConstraintCopy := Config.CopyConstraint(&AutomationCopy.Constraints[Constraint_k])
+			if ConstraintCopy.Cron != "" && !ConstraintCopy.Initialized {
+
+				AutomationCopy.Constraints[Constraint_k].Mutex.Lock()
+				Constraint := &AutomationCopy.Constraints[Constraint_k]
+
 				Constraint.Initialized = true
 
 				Constraint.Cron_Parsed.Expression, _ = cronexpr.Parse(Config.Find(`^\s*((?:[^-][^\s]*\s?)+|@[a-z]+)`, Constraint.Cron))
@@ -29,15 +33,15 @@ func Deploy() {
 				if Constraint.Cron_Parsed.Reset > 0 {
 					Constraint.Cron_Parsed.Reset_Timer = time.NewTimer(Constraint.Cron_Parsed.Reset)
 					Constraint.Cron_Parsed.Reset_Timer.Stop()
-					go func(id uint64, Constraint *Config.Constraint_t) {
-						_, ok := Config.GetAutomation(id)
+					go func(id int, Constraint *Config.Constraint_t) {
+						_, ok := Config.CopyAutomation(id)
 						for ok {
 							<-Constraint.Cron_Parsed.Reset_Timer.C
-							_, ok := Config.GetAutomation(id)
+							_, ok := Config.CopyAutomation(id)
 							if ok {
 								Constraint.Mutex.Lock()
-								defer Constraint.Mutex.Unlock()
 								setTriggered(id, Constraint, false)
+								Constraint.Mutex.Unlock()
 							} else {
 								break
 							}
@@ -46,28 +50,30 @@ func Deploy() {
 				}
 
 				// Add Cron Trigger
-				Constraint.Cron_Parsed.NextTime = Constraint.Cron_Parsed.Expression.Next(time.Now().In(Config.GetConfigFile().Timezone_parsed))
-				Constraint.Cron_Parsed.Cron_Timer = time.NewTimer(Constraint.Cron_Parsed.NextTime.Sub(time.Now().In(Config.GetConfigFile().Timezone_parsed)))
-				go func(id uint64, Constraint *Config.Constraint_t) {
-					_, ok := Config.GetAutomation(id)
+				Constraint.Cron_Parsed.NextTime = Constraint.Cron_Parsed.Expression.Next(time.Now().In(ConfigFileCopy.Timezone_parsed))
+				Constraint.Cron_Parsed.Cron_Timer = time.NewTimer(Constraint.Cron_Parsed.NextTime.Sub(time.Now().In(ConfigFileCopy.Timezone_parsed)))
+				go func(id int, Constraint *Config.Constraint_t) {
+					_, ok := Config.CopyAutomation(id)
 					for ok {
 						<-Constraint.Cron_Parsed.Cron_Timer.C
-						_, ok := Config.GetAutomation(id)
+						_, ok := Config.CopyAutomation(id)
 						if ok {
 							Constraint.Mutex.Lock()
-							defer Constraint.Mutex.Unlock()
 							setTriggered(id, Constraint, true)
-							Constraint.Cron_Parsed.NextTime = Constraint.Cron_Parsed.Expression.Next(time.Now().In(Config.GetConfigFile().Timezone_parsed))
-							Constraint.Cron_Parsed.Cron_Timer.Reset(Constraint.Cron_Parsed.NextTime.Sub(time.Now().In(Config.GetConfigFile().Timezone_parsed)))
+							Constraint.Cron_Parsed.NextTime = Constraint.Cron_Parsed.Expression.Next(time.Now().In(ConfigFileCopy.Timezone_parsed))
+							Constraint.Cron_Parsed.Cron_Timer.Reset(Constraint.Cron_Parsed.NextTime.Sub(time.Now().In(ConfigFileCopy.Timezone_parsed)))
 							// Reset immediately if no Reset timer defined
 							if Constraint.Cron_Parsed.Reset == 0 {
 								setTriggered(id, Constraint, false)
 							}
+							Constraint.Mutex.Unlock()
 						} else {
 							break
 						}
 					}
 				}(id, Constraint)
+
+				AutomationCopy.Constraints[Constraint_k].Mutex.Unlock()
 
 			}
 
@@ -77,7 +83,7 @@ func Deploy() {
 
 }
 
-func setTriggered(id uint64, Constraint *Config.Constraint_t, triggered bool) {
+func setTriggered(id int, Constraint *Config.Constraint_t, triggered bool) {
 
 	if triggered {
 

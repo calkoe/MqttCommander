@@ -9,23 +9,28 @@ import (
 
 func Deploy() {
 
-	for _, Automation := range Config.GetAutomations() {
+	for _, AutomationCopy := range Config.CopyAutomations() {
 
 		// Setup Actions
-		for Action_k := range Automation.Actions {
-			Automation.Actions[Action_k].Mutex.Lock()
-			defer Automation.Actions[Action_k].Mutex.Unlock()
+		for Action_k := range AutomationCopy.Actions {
 
-			Action := &Automation.Actions[Action_k]
-			if Action.Http != "" && !Action.Initialized {
+			ActionCopy := Config.CopyAction(&AutomationCopy.Actions[Action_k])
+			if ActionCopy.Http != "" && !ActionCopy.Initialized {
+
+				AutomationCopy.Actions[Action_k].Mutex.Lock()
+				Action := &AutomationCopy.Actions[Action_k]
+
 				Action.Initialized = true
+
 				// Setup Trigger Handler
-				Action.Trigger = func(Automation Config.Automation_t, Action *Config.Action_t) {
-					tmpl, _ := template.New("value").Parse(Action.Http)
+				Action.Trigger = func(AutomationCopy Config.Automation_t, ActionCopy Config.Action_t) {
+					tmpl, _ := template.New("value").Parse(ActionCopy.Http)
 					var buf bytes.Buffer
-					tmpl.Execute(&buf, Automation)
+					tmpl.Execute(&buf, AutomationCopy)
 					http.Get(buf.String())
 				}
+
+				AutomationCopy.Actions[Action_k].Mutex.Unlock()
 
 			}
 

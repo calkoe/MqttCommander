@@ -1,0 +1,38 @@
+- Name: INIT Test 2
+  Triggered: true
+  Delay: 2s
+  Actions:
+    - Mqtt : _test/2/con1 = 1
+    - Mqtt : _test/2/con2.val = -1
+    - Mqtt : _test/2/con3.val = 1.9
+    - Mqtt : _test/2/con4.val = -1.563
+    - Mqtt : _test/2/con5.val = "demo"
+    - Mqtt : _test/2/con6 = "-"
+
+- Name: A - Check Conditions (true)
+  Constraints: 
+    - Mqtt : _test/2/con1 == 1
+    - Mqtt : _test/2/con2.val == -1
+    - Mqtt : _test/2/con3.val < 2
+    - Mqtt : _test/2/con4.val < -1.5
+    - Mqtt : _test/2/con5.val == "demo"
+    - Mqtt : _test/2/con6 == "-"
+  Actions:
+    - Mqtt : _test/2/a = 1 
+
+- Name: B - Check Conditions (false)
+  Delay: 1s
+  Mode: OR
+  Constraints: 
+    - Mqtt : _test/2/con1 != 1
+    - Mqtt : _test/2/con2.val ""= -1
+    - Mqtt : _test/2/con3.val > 2
+    - Mqtt : _test/2/con4.val > -1.5
+    - Mqtt : _test/2/con5.val != "demo"
+    - Mqtt : _test/2/con6 != "-"
+  Actions:
+    - Mqtt : _test/2/a = 0
+
+- Name: SUCCESS
+  Constraints: 
+    - Mqtt : _test/2/a = 1 

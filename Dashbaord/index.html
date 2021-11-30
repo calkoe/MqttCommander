@@ -61,6 +61,7 @@
                                     <td>Pause</td>
                                     <td>Reminder</td>
                                     <td>Delay</td>
+                                    <td>Inverse</td>
                                     <td>Value <span class="badge bg-info">{{ $automation.Value_Time | diff }}</span></td>
                                 </tr>
                                 <tr>
@@ -68,6 +69,7 @@
                                     <td class="{{if $automation | automationInPause }} bg-warning {{ end }}" >{{.Pause}}</td>
                                     <td class="{{if $automation.Reminder_Active }} bg-warning {{ end }}" >{{.Reminder}}</td>
                                     <td class="{{if $automation.Delay_Active }} bg-warning {{ end }}" > {{.Delay}}</td>
+                                    <td> {{.Inverse}}</td>
                                     <td class="{{if $automation.Value_Time | range2s }} bg-warning {{ end }}" >{{.Value}}</td>
                                 </tr>
                             </table>
