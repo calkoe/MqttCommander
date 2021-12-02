@@ -100,6 +100,9 @@ func setTriggered(id int, Constraint *Config.Constraint_t, triggered bool) {
 	Constraint.Triggered = triggered
 
 	// CheckTriggered
-	go Config.CheckTriggered(id, Constraint.Mqtt_Parsed.NoTrigger)
+	NoTrigger := Constraint.Mqtt_Parsed.NoTrigger
+	Constraint.Mutex.Unlock()
+	Config.CheckTriggered(id, NoTrigger)
+	Constraint.Mutex.Lock()
 
 }

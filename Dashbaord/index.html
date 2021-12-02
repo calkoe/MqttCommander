@@ -2,7 +2,7 @@
     <head>
         <title>{{.ConfigFile.Name}}</title>
         <meta http-equiv="refresh" content="1">
-        <meta name="viewport" content="width=1200px, initial-scale=1.0">
+        <meta name="viewport" content="width=device-width, initial-scale=0.4">
         <link rel="stylesheet" href="bootstrap.min.css">
         <style>
             * {
@@ -28,8 +28,9 @@
 
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
             <div class="container-fluid ">
-                <a class="navbar-brand" href="/">{{.ConfigFile.Name}}</a>
-                <a class="navbar-brand">{{.LocalTime}}</a>
+                <a class="navbar-brand" href="/">{{.ConfigFile.Name}} ({{.AutomationsLen}} Automations)</a>
+                {{.LocalTime}}
+                {{ if .MqttClientIsConnectionOpen  }} <span class="badge bg-success">Mqtt connected</span> {{else}} <span class="badge bg-error">Mqtt not connected</span> {{end}}
             </div>
         </nav>
 
@@ -52,7 +53,8 @@
                         <div class="card-header bg-dark p-2 border-2 {{if or (.Triggered) (.Triggered_Time | range2s) }} border-success {{else}} border-danger {{end}}" style="border-radius:0;">
                             <span class="badge {{if $automation.Triggered_Time | range2s }} bg-warning {{ else }} bg-info {{ end }}">{{.Triggered_Time | diff }}</span>
                             <span class="badge bg-info" >{{.Mode}}</span>
-                            {{ if $automation.Retrigger  }} <span class="badge bg-success">Retrigger</span> {{end}}
+                            {{ if $automation.Retrigger  }}     <span class="badge bg-success">Retrigger</span> {{end}}
+                            {{ if $automation.RTTduration  }}   <span class="badge bg-success">RTT: {{ .RTTduration }}</span> {{end}}
                             <span style="font-size:11pt !important">{{.Name}}</span>
                             <span style="float:right" class="text-muted">[ID:{{$key}}] {{.File}}</span>
                             <table class="table text-left border-none table-borderless m-0 mt-2">
@@ -61,7 +63,6 @@
                                     <td>Pause</td>
                                     <td>Reminder</td>
                                     <td>Delay</td>
-                                    <td>Inverse</td>
                                     <td>Value <span class="badge bg-info">{{ $automation.Value_Time | diff }}</span></td>
                                 </tr>
                                 <tr>
@@ -69,7 +70,6 @@
                                     <td class="{{if $automation | automationInPause }} bg-warning {{ end }}" >{{.Pause}}</td>
                                     <td class="{{if $automation.Reminder_Active }} bg-warning {{ end }}" >{{.Reminder}}</td>
                                     <td class="{{if $automation.Delay_Active }} bg-warning {{ end }}" > {{.Delay}}</td>
-                                    <td> {{.Inverse}}</td>
                                     <td class="{{if $automation.Value_Time | range2s }} bg-warning {{ end }}" >{{.Value}}</td>
                                 </tr>
                             </table>
@@ -151,6 +151,7 @@
                                                 <td>{{.Mqtt_Parsed.Value}}</td>
                                                 <td>
                                                     {{ if .Mqtt_Parsed.Retained  }} <span class="badge bg-warning">Retained</span> {{end}}
+                                                    {{ if .Mqtt_Parsed.Reverse  }} <span class="badge bg-warning">Reverse</span> {{end}}
                                                 </td>
                                             </tr>
                                         {{end}}

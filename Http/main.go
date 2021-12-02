@@ -5,6 +5,8 @@ import (
 	"bytes"
 	"html/template"
 	"net/http"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func Deploy() {
@@ -22,12 +24,27 @@ func Deploy() {
 
 				Action.Initialized = true
 
+				// Parse Template
+				var err error
+				Action.Http_Parsed.Template, err = template.New("value").Parse(ActionCopy.Http)
+				if err != nil {
+					log.Errorf("[HTTP] error while parsing Template: %s", err)
+					return
+				}
+
 				// Setup Trigger Handler
 				Action.Trigger = func(AutomationCopy Config.Automation_t, ActionCopy Config.Action_t) {
-					tmpl, _ := template.New("value").Parse(ActionCopy.Http)
-					var buf bytes.Buffer
-					tmpl.Execute(&buf, AutomationCopy)
-					http.Get(buf.String())
+
+					// Run Action
+					if ActionCopy.Triggered && Action.Http_Parsed.Template != nil {
+						var buf bytes.Buffer
+						Action.Http_Parsed.Template.Execute(&buf, AutomationCopy)
+						http.Get(buf.String())
+					}
+
+					// Stop RTT Measurement
+					Config.RTTstop(AutomationCopy.Id)
+
 				}
 
 				AutomationCopy.Actions[Action_k].Mutex.Unlock()

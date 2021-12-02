@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	_ "embed"
 	"encoding/hex"
+	"html/template"
 	"io"
 	"io/ioutil"
 	"os"
@@ -37,7 +38,6 @@ type Automation_t struct {
 	Mode             string `default:"AND" yaml:"Mode"`
 	Retrigger        bool   `yaml:"Retrigger"`
 	Hidden           bool   `yaml:"Hidden"`
-	Inverse          bool   `yaml:"Inverse"`
 	Retrigger_Active bool
 	Pause            time.Duration `yaml:"Pause"`
 	Reminder         time.Duration `yaml:"Reminder"`
@@ -54,6 +54,8 @@ type Automation_t struct {
 	Value            interface{}
 	Value_Time       time.Time
 	Initialized      bool
+	RTTstart         time.Time
+	RTTduration      time.Duration
 }
 
 type Constraint_t struct {
@@ -97,8 +99,13 @@ type Action_t struct {
 		Value    string
 		IsString bool
 		Retained bool
+		Reverse  bool
+		Template *template.Template
 	}
-	Http           string `yaml:"Http"`
+	Http        string `yaml:"Http"`
+	Http_Parsed struct {
+		Template *template.Template
+	}
 	Trigger        func(Automation_t, Action_t)
 	Triggered      bool
 	Triggered_Time time.Time
@@ -115,7 +122,7 @@ var automationsMutex deadlock.RWMutex
 //go:embed config.yml
 var config_yml []byte
 
-//go:embed automations/automation.yml
+//go:embed Automations/automation.yml
 var automation_yml []byte
 
 func SetupConfig() {
@@ -158,9 +165,9 @@ func ReadConfig() {
 	// Check ConfigPath
 	if _, err := os.Stat(configFile.ConfigPath); err != nil {
 		if os.IsNotExist(err) {
-			log.Warn("[CONFIG] " + configFile.ConfigPath + " does not exits, creating it!")
+			log.Infof("[CONFIG] " + configFile.ConfigPath + " does not exits, creating it!")
 			os.Mkdir(configFile.ConfigPath, 0744)
-			log.Warn("[CONFIG] " + configFile.ConfigPath + "/config.yml does not exits, creating it!")
+			log.Infof("[CONFIG] " + configFile.ConfigPath + "/config.yml does not exits, creating it!")
 			os.WriteFile(configFile.ConfigPath+"/config.yml", config_yml, 0644)
 		}
 	}
@@ -174,13 +181,13 @@ func ReadConfig() {
 	log.Infof("[CONFIG] Successfully read main config file: %s", configFile.ConfigPath+"/config.yml")
 
 	// Check ConfigPath/automations
-	configFile.AutomationsPath = configFile.ConfigPath + "/automations"
+	configFile.AutomationsPath = configFile.ConfigPath + "/Automations"
 	log.Infof("[CONFIG] Set AutomationsPath to: %s", configFile.AutomationsPath)
 	if _, err := os.Stat(configFile.AutomationsPath); err != nil {
 		if os.IsNotExist(err) {
-			log.Warnf("[CONFIG] %S does not exits, creating it!", configFile.AutomationsPath)
+			log.Infof("[CONFIG] %s does not exits, creating it!", configFile.AutomationsPath)
 			os.Mkdir(configFile.AutomationsPath, 0744)
-			log.Warnf("[CONFIG] %s/automation.yml does not exits, creating it!", configFile.AutomationsPath)
+			log.Infof("[CONFIG] %s does not exits, creating it!", configFile.AutomationsPath+"/automation.yml")
 			os.WriteFile(configFile.AutomationsPath+"/automation.yml", automation_yml, 0644)
 		}
 	}
@@ -264,9 +271,7 @@ func ReadAutomations() uint {
 			var automationsNew []Automation_t
 			yaml.Unmarshal(FileContent, &automationsNew)
 			for idNew := range automationsNew {
-				automationsNew[idNew].Id = ConfigFileCopy.IdCounter
-				automationsNew[idNew].File = path
-				AddAutomation(automationsNew[idNew])
+				AddAutomation(automationsNew[idNew], path)
 			}
 
 			// Add File to configFile.Files
@@ -317,14 +322,16 @@ func Deploy() {
 					AutomationCopy, ok := CopyAutomation(id)
 					for ok {
 						<-AutomationCopy.Delay_Timer.C
-						_, ok := CopyAutomation(id)
+						automationsMutex.Lock()
+						automation, ok := automations[id]
 						if ok {
-							RunActions(id)
-							SetDelayActive(id, false)
-						} else {
+							triggerAction(automation, true)
+							automation.Delay_Active = false
+						}
+						automationsMutex.Unlock()
+						if !ok {
 							break
 						}
-
 					}
 				}(id)
 			}
@@ -337,10 +344,13 @@ func Deploy() {
 					AutomationCopy, ok := CopyAutomation(id)
 					for ok {
 						<-AutomationCopy.Reminder_Ticker.C
-						_, ok := CopyAutomation(id)
+						automationsMutex.Lock()
+						automation, ok := automations[id]
 						if ok {
-							RunActions(id)
-						} else {
+							triggerAction(automation, true)
+						}
+						automationsMutex.Unlock()
+						if !ok {
 							break
 						}
 					}
@@ -350,7 +360,7 @@ func Deploy() {
 			// If inital triggered
 			if Automation.Triggered {
 				Automation.Triggered = false
-				go SetTriggered(id, true)
+				setTriggered(Automation, true)
 			}
 
 		}
@@ -359,13 +369,11 @@ func Deploy() {
 
 func CheckTriggered(id int, NoTrigger bool) {
 
+	// Check
 	AutomationCopy, ok := CopyAutomation(id)
 	if !ok {
 		return
 	}
-
-	// Debug
-	// log.Debugf("CheckTriggered Automation: %s", Automation.Name)
 
 	triggered := 0
 
@@ -375,146 +383,130 @@ func CheckTriggered(id int, NoTrigger bool) {
 		}
 	}
 
-	if AutomationCopy.Mode == "AND" && triggered == len(AutomationCopy.Constraints) {
-		if !NoTrigger {
-			SetTriggered(id, true)
-		}
-	} else if AutomationCopy.Mode == "OR" && triggered >= 1 {
-		if !NoTrigger {
-			SetTriggered(id, true)
-		}
-	} else {
-		SetTriggered(id, false)
-	}
-}
-
-func SetTriggered(id int, triggered bool) {
-
+	// Set
 	automationsMutex.Lock()
 	defer automationsMutex.Unlock()
 	Automation, ok := automations[id]
-	if ok {
-
-		// Debug
-		// log.Debugf("SetTriggered automations: %s, Automation.triggered: %t, triggered: %t", automations[id].Name, Automation.Triggered, triggered)
-
-		if !triggered {
-
-			// Retrigger
-			if !Automation.Triggered && !Automation.Retrigger {
-				return
-			}
-
-			// Retrigger
-			Automation.Retrigger_Active = false
-
-			// Setting: Delay
-			if Automation.Delay > 0 {
-				Automation.Delay_Timer.Stop()
-				Automation.Delay_Active = false
-			}
-
-			// Setting: Reminder
-			if Automation.Reminder > 0 {
-				Automation.Reminder_Ticker.Stop()
-				Automation.Reminder_Active = false
-			}
-
-			//stopActions
-			if Automation.Inverse {
-				go RunActions(id)
-			} else {
-				go StopActions(id)
-			}
-
-		}
-
-		if triggered {
-
-			// Retrigger
-			if Automation.Triggered {
-				if Automation.Retrigger {
-					Automation.Retrigger_Active = true
-				} else {
-					return
-				}
-			}
-
-			// Setting: Pause
-			if time.Since(Automation.Triggered_Time) < Automation.Pause {
-				return
-			}
-			Automation.Triggered_Time = time.Now()
-
-			// Setting: Delay
-			if !Automation.Inverse {
-				if Automation.Delay > 0 {
-					Automation.Delay_Timer.Reset(Automation.Delay)
-					Automation.Delay_Active = true
-				} else {
-					go RunActions(id)
-				}
-			} else {
-				go StopActions(id)
-			}
-
-			// Setting Reminder
-			if Automation.Reminder > 0 {
-				Automation.Reminder_Ticker.Reset(Automation.Reminder)
-				Automation.Reminder_Active = true
-			}
-
-		}
-
-		//	Log
-		if Automation.Triggered != triggered {
-			log.WithFields(log.Fields{
-				"Id":        Automation.Id,
-				"Name":      Automation.Name,
-				"File":      strings.Replace(Automation.File, configFile.AutomationsPath+"/", "", 1),
-				"Value":     Automation.Value,
-				"Triggered": triggered,
-			}).Debugf("[CONFIG] Automation changed [%p]", Automation)
-		}
-
-		Automation.Triggered = triggered
-
-	}
-}
-
-func RunActions(id int) {
-
-	AutomationCopy, ok := CopyAutomation(id)
 	if !ok {
 		return
 	}
 
-	//log.Errorf("RUN ACTIONS ID=%d [%p]!", Automation.Id, Automation)
+	if AutomationCopy.Mode == "AND" && triggered == len(AutomationCopy.Constraints) {
+		if !NoTrigger {
+			setTriggered(Automation, true)
+		}
+	} else if AutomationCopy.Mode == "OR" && triggered >= 1 {
+		if !NoTrigger {
+			setTriggered(Automation, true)
+		}
+	} else {
+		setTriggered(Automation, false)
+	}
+
+}
+
+func setTriggered(Automation *Automation_t, triggered bool) {
+
+	// Debug
+	// log.Debugf("SetTriggered automations: %s, Automation.triggered: %t, triggered: %t", Automation.Name, Automation.Triggered, triggered)
+
+	if !triggered {
+
+		// Retrigger
+		if !Automation.Triggered && !Automation.Retrigger {
+			return
+		}
+
+		// Retrigger
+		Automation.Retrigger_Active = false
+
+		// Setting: Delay
+		if Automation.Delay > 0 {
+			Automation.Delay_Timer.Stop()
+			Automation.Delay_Active = false
+		}
+
+		// Setting: Reminder
+		if Automation.Reminder > 0 {
+			Automation.Reminder_Ticker.Stop()
+			Automation.Reminder_Active = false
+		}
+
+		//stopActions
+		triggerAction(Automation, false)
+
+	}
+
+	if triggered {
+
+		// Retrigger
+		if Automation.Triggered {
+			if Automation.Retrigger {
+				Automation.Retrigger_Active = true
+			} else {
+				return
+			}
+		}
+
+		// Setting: Pause
+		if time.Since(Automation.Triggered_Time) < Automation.Pause {
+			return
+		}
+		Automation.Triggered_Time = time.Now()
+
+		// Setting: Delay
+		if Automation.Delay > 0 {
+			Automation.Delay_Timer.Reset(Automation.Delay)
+			Automation.Delay_Active = true
+		} else {
+			triggerAction(Automation, true)
+		}
+
+		// Setting Reminder
+		if Automation.Reminder > 0 {
+			Automation.Reminder_Ticker.Reset(Automation.Reminder)
+			Automation.Reminder_Active = true
+		}
+
+	}
+
+	//	Log
+	if Automation.Triggered != triggered {
+		log.WithFields(log.Fields{
+			"Id":        Automation.Id,
+			"Name":      Automation.Name,
+			"File":      strings.Replace(Automation.File, configFile.AutomationsPath+"/", "", 1),
+			"Value":     Automation.Value,
+			"Triggered": triggered,
+		}).Debugf("[CONFIG] Automation changed [%p]", Automation)
+	}
+
+	Automation.Triggered = triggered
+
+}
+
+func triggerAction(Automation *Automation_t, start bool) {
+
+	// log.Debugf("triggerAction automations: %s, start: %t", Automation.Name, start)
+
+	// Create working copy
+	AutomationCopy := *Automation
+	automationsMutex.Unlock()
+	defer automationsMutex.Lock()
+
+	// Run Actions
 	for Action_k := range AutomationCopy.Actions {
 		if CopyAction(&AutomationCopy.Actions[Action_k]).Trigger != nil {
 			if !configFile.Muted {
 				AutomationCopy.Actions[Action_k].Mutex.Lock()
-				AutomationCopy.Actions[Action_k].Triggered = true
-				AutomationCopy.Actions[Action_k].Triggered_Time = time.Now()
-				go AutomationCopy.Actions[Action_k].Trigger(AutomationCopy, AutomationCopy.Actions[Action_k])
+				AutomationCopy.Actions[Action_k].Triggered = start
+				go AutomationCopy.Actions[Action_k].Trigger(AutomationCopy, Automation.Actions[Action_k])
+				if start {
+					AutomationCopy.Actions[Action_k].Triggered_Time = time.Now()
+				}
 				AutomationCopy.Actions[Action_k].Mutex.Unlock()
 			}
 		}
-	}
-
-}
-
-func StopActions(id int) {
-
-	AutomationCopy, ok := CopyAutomation(id)
-	if !ok {
-		return
-	}
-
-	for Action_k := range AutomationCopy.Actions {
-		AutomationCopy.Actions[Action_k].Mutex.Lock()
-		AutomationCopy.Actions[Action_k].Triggered = false
-		AutomationCopy.Actions[Action_k].Mutex.Unlock()
 	}
 
 }
@@ -531,12 +523,24 @@ func SetValue(id int, value interface{}) {
 
 }
 
-func SetDelayActive(id int, status bool) {
+func RTTstart(id int, t time.Time) {
 
 	automationsMutex.Lock()
 	Automation, ok := automations[id]
 	if ok {
-		Automation.Delay_Active = status
+		Automation.RTTstart = t
+	}
+	automationsMutex.Unlock()
+
+}
+
+func RTTstop(id int) {
+
+	automationsMutex.Lock()
+	Automation, ok := automations[id]
+	if ok && !Automation.RTTstart.IsZero() {
+		Automation.RTTduration = time.Since(Automation.RTTstart)
+		Automation.RTTstart = time.Time{}
 	}
 	automationsMutex.Unlock()
 
@@ -567,7 +571,7 @@ func CopyAutomation(id int) (Automation_t, bool) {
 
 }
 
-func AddAutomation(Automation Automation_t) {
+func AddAutomation(Automation Automation_t, path string) {
 
 	// Increase Id Counter
 	configFileMutex.RLock()
@@ -578,6 +582,8 @@ func AddAutomation(Automation Automation_t) {
 	// Add Automation
 	automationsMutex.Lock()
 	automations[IdCounter] = &Automation
+	automations[IdCounter].Id = IdCounter
+	automations[IdCounter].File = path
 	automationsMutex.Unlock()
 
 }

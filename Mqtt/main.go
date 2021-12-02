@@ -15,13 +15,15 @@ import (
 )
 
 var Client MQTT.Client
+var Expression *regexp.Regexp
 
 //define a function for the default message handler
 var DefaultPublishHandler MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
 	//fmt.Printf("TOPIC: %s\n", msg.Topic())
 	//fmt.Printf("MSG: %s\n", msg.Payload())
 
-	go func() {
+	// Start RTT Measurement
+	go func(t time.Time) {
 
 		// Find matching topics
 		for id, AutomationCopy := range Config.CopyAutomations() {
@@ -29,19 +31,22 @@ var DefaultPublishHandler MQTT.MessageHandler = func(client MQTT.Client, msg MQT
 
 				ConstraintCopy := Config.CopyConstraint(&AutomationCopy.Constraints[Constraint_k])
 				if ConstraintCopy.Mqtt != "" && ConstraintCopy.Mqtt_Parsed.Topic == msg.Topic() {
+					Config.RTTstart(id, t)
 					OnMessage(id, &AutomationCopy.Constraints[Constraint_k], client, msg)
 				}
 
 			}
 		}
 
-	}()
+	}(time.Now())
 
 }
 
 func Connect() {
 
 	ConfigFileCopy := Config.CopyConfigFile()
+
+	Expression = regexp.MustCompile(`^\s*(?P<Topic>[^\.\s]*)(?:\.(?P<Object>\S*))?(?:\s+(?P<Comparator>[^-][\S]*))?(?:\s+"(?P<Value_String>.*)")?(?:\s+(?P<Value_Float>(?:-[0-9.]+)|(?:[^-][\S]*)))?.*$`)
 
 	log.Infof("[MQTT] Connecting to MQTT Server: %s", Config.CopyConfigFile().MqttUri)
 
@@ -107,7 +112,7 @@ func Deploy() {
 
 				Constraint.Initialized = true
 
-				match := regexp.MustCompile(`^\s*(?P<Topic>[^\.\s]*)(?:\.(?P<Object>\S*))?(?:\s+(?P<Comparator>[^-][\S]*))?(?:\s+"(?P<Value_String>.*)")?(?:\s+(?P<Value_Float>(?:-[0-9.]+)|(?:[^-][\S]*)))?.*$`).FindStringSubmatch(Constraint.Mqtt)
+				match := Expression.FindStringSubmatch(Constraint.Mqtt)
 
 				// Debug
 				/*
@@ -201,7 +206,7 @@ func Deploy() {
 
 				Action.Initialized = true
 
-				match := regexp.MustCompile(`^\s*(?P<Topic>[^\.\s]*)(?:\.(?P<Object>\S*))?(?:\s+(?P<Comparator>[^-][\S]*))?(?:\s+"(?P<Value_String>.*)")?(?:\s+(?P<Value_Float>(?:-[0-9.]+)|(?:[^-][\S]*)))?.*$`).FindStringSubmatch(Action.Mqtt)
+				match := Expression.FindStringSubmatch(Action.Mqtt)
 
 				// Debug
 				/*
@@ -230,16 +235,24 @@ func Deploy() {
 						Action.Mqtt_Parsed.IsString = false
 					}
 					Action.Mqtt_Parsed.Retained, _ = strconv.ParseBool(Config.Find(`-Retained\s+(\S+)`, Action.Mqtt))
+					Action.Mqtt_Parsed.Reverse, _ = strconv.ParseBool(Config.Find(`-Reverse\s+(\S+)`, Action.Mqtt))
+
+					// Parse Template
+					var err error
+					Action.Mqtt_Parsed.Template, err = template.New("value").Parse(Action.Mqtt_Parsed.Value)
+					if err != nil {
+						log.Errorf("[MQTT] error while parsing Template: %s", err)
+						return
+					}
 
 					// Setup Trigger Handler
 					Action.Trigger = func(AutomationCopy Config.Automation_t, ActionCopy Config.Action_t) {
-						var payload string
-						tmpl, err := template.New("value").Parse(ActionCopy.Mqtt_Parsed.Value)
-						if err != nil {
-							log.Errorf("[MQTT] error while parsing Template: %s", err)
-						} else {
+
+						// Run Action
+						if ActionCopy.Triggered != ActionCopy.Mqtt_Parsed.Reverse && ActionCopy.Mqtt_Parsed.Template != nil {
+							var payload string
 							var buf bytes.Buffer
-							tmpl.Execute(&buf, AutomationCopy)
+							ActionCopy.Mqtt_Parsed.Template.Execute(&buf, AutomationCopy)
 							if ActionCopy.Mqtt_Parsed.Object != "" {
 								if ActionCopy.Mqtt_Parsed.IsString {
 									payload = fmt.Sprintf("{\"%s\":\"%s\"}", ActionCopy.Mqtt_Parsed.Object, buf.String())
@@ -249,12 +262,13 @@ func Deploy() {
 							} else {
 								payload = buf.String()
 							}
-							// Publish
 							Client.Publish(ActionCopy.Mqtt_Parsed.Topic, 2, ActionCopy.Mqtt_Parsed.Retained, payload)
 						}
 
-					}
+						// Stop RTT Measurement
+						Config.RTTstop(AutomationCopy.Id)
 
+					}
 				}
 
 				AutomationCopy.Actions[Action_k].Mutex.Unlock()
@@ -404,6 +418,9 @@ func setTriggered(id int, Constraint *Config.Constraint_t, triggered bool) {
 	Constraint.Triggered = triggered
 
 	// CheckTriggered
-	go Config.CheckTriggered(id, Constraint.Mqtt_Parsed.NoTrigger)
+	NoTrigger := Constraint.Mqtt_Parsed.NoTrigger
+	Constraint.Mutex.Unlock()
+	Config.CheckTriggered(id, NoTrigger)
+	Constraint.Mutex.Lock()
 
 }
