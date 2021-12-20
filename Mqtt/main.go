@@ -42,7 +42,7 @@ var DefaultPublishHandler MQTT.MessageHandler = func(client MQTT.Client, msg MQT
 
 }
 
-func Connect() {
+func Init() {
 
 	ConfigFileCopy := Config.CopyConfigFile()
 
@@ -88,11 +88,12 @@ func Connect() {
 
 	//create and start a client using the above ClientOptions
 	Client = MQTT.NewClient(opts)
-	token := Client.Connect()
+	Client.Connect()
+	/*token := Client.Connect()
 	token.Wait()
 	if token.Error() != nil {
 		log.Errorf("[MQTT] Connection to MQTT server failed, error: %s", token.Error())
-	}
+	}*/
 
 }
 

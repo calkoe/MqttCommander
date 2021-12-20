@@ -162,11 +162,17 @@ func ReadConfig() {
 	configFileMutex.Lock()
 	defer configFileMutex.Unlock()
 
-	// Check ConfigPath
+	// Create ConfigPath
 	if _, err := os.Stat(configFile.ConfigPath); err != nil {
 		if os.IsNotExist(err) {
 			log.Infof("[CONFIG] " + configFile.ConfigPath + " does not exits, creating it!")
 			os.Mkdir(configFile.ConfigPath, 0744)
+		}
+	}
+
+	// Create ConfigPath/config.yml
+	if _, err := os.Stat(configFile.ConfigPath + "/config.yml"); err != nil {
+		if os.IsNotExist(err) {
 			log.Infof("[CONFIG] " + configFile.ConfigPath + "/config.yml does not exits, creating it!")
 			os.WriteFile(configFile.ConfigPath+"/config.yml", config_yml, 0644)
 		}
@@ -180,7 +186,7 @@ func ReadConfig() {
 	yaml.Unmarshal(yamlFile, &configFile)
 	log.Infof("[CONFIG] Successfully read main config file: %s", configFile.ConfigPath+"/config.yml")
 
-	// Check ConfigPath/automations
+	// Create ConfigPath/automations
 	configFile.AutomationsPath = configFile.ConfigPath + "/Automations"
 	log.Infof("[CONFIG] Set AutomationsPath to: %s", configFile.AutomationsPath)
 	if _, err := os.Stat(configFile.AutomationsPath); err != nil {
@@ -496,7 +502,8 @@ func triggerAction(Automation *Automation_t, start bool) {
 
 	// Run Actions
 	for Action_k := range AutomationCopy.Actions {
-		if CopyAction(&AutomationCopy.Actions[Action_k]).Trigger != nil {
+		ActionCopy := CopyAction(&AutomationCopy.Actions[Action_k])
+		if ActionCopy.Trigger != nil && (start || ActionCopy.Triggered) {
 			if !configFile.Muted {
 				AutomationCopy.Actions[Action_k].Mutex.Lock()
 				AutomationCopy.Actions[Action_k].Triggered = start

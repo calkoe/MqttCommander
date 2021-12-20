@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"time"
 
 	"MqttCommander/Config"
@@ -25,7 +24,7 @@ func main() {
 	// Setup
 	Config.SetupConfig()
 	Config.ReadConfig()
-	Mqtt.Connect()
+	Mqtt.Init()
 	Dashbaord.Init()
 
 	// Watch Changes
@@ -41,7 +40,9 @@ func main() {
 		}
 	}()
 
-	// Quit
-	fmt.Scanln()
+	// Forever
+	for {
+		time.Sleep(time.Second)
+	}
 
 }
