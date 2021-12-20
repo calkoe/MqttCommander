@@ -1,4 +1,4 @@
-project_name: MqttCommader
+project_name: MqttCommander
 builds:
   - env: [CGO_ENABLED=0]
     goos:
