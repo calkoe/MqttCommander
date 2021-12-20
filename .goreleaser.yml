@@ -1,0 +1,30 @@
+project_name: MqttCommader
+builds:
+  - env: [CGO_ENABLED=0]
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+dockers:
+- image_templates: ["ghcr.io/goreleaser/example:{{ .Version }}"]
+  dockerfile: Dockerfile
+  build_flag_templates:
+  - --label=org.opencontainers.image.title={{ .ProjectName }}
+  - --label=org.opencontainers.image.description={{ .ProjectName }}
+  - --label=org.opencontainers.image.url=https://github.com/calkoe/MqttCommander
+  - --label=org.opencontainers.image.source=https://github.com/calkoe/MqttCommander
+  - --label=org.opencontainers.image.version={{ .Version }}
+  - --label=org.opencontainers.image.revision={{ .FullCommit }}
+  - --label=org.opencontainers.image.licenses=MIT
+nfpms:
+- maintainer: Calvin Köcher <calvin.koecher@alumni@fh-aachen.de>
+  description: MQTT COMMANDER - A robust and easy to use MQTT rule engine
+  homepage: https://github.com/calkoe/MqttCommander
+  license: MIT
+  formats:
+  - deb
+  - rpm
+  - apk

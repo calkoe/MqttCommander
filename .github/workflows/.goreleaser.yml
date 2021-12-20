@@ -1,3 +1,0 @@
-dockers:
-  - image_templates:
-    - calkoe/mqttcommander
