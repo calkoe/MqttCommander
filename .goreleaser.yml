@@ -3,33 +3,54 @@ builds:
     - CGO_ENABLED=0
     binary: MqttCommander
     goos:
-    - linux
+      - linux
     goarch:
-    - amd64
-    - arm64
+      - amd64
+      - arm
+      - arm64
+    goarm:
+      - 6
+      - 7
 
 dockers:
   - image_templates:
     - "calkoe/mqttcommander:{{ .Version }}-amd64"
-    use: buildx
-    goos: linux
-    goarch: amd64
-    dockerfile: Dockerfile
-    build_flag_templates:
-    - "--platform=linux/amd64"
-  - image_templates:
+      use: buildx
+      goos: linux
+      goarch: amd64
+      dockerfile: Dockerfile
+      build_flag_templates:
+        - "--platform=linux/amd64"
+    - "calkoe/mqttcommander:{{ .Version }}-armv6"
+      use: buildx
+      goos: linux
+      goarch: arm
+      goarm: 6
+      dockerfile: Dockerfile
+      build_flag_templates:
+        - "--platform=linux/arm/v6"
+    - "calkoe/mqttcommander:{{ .Version }}-armv7"
+      use: buildx
+      goos: linux
+      goarch: arm
+      goarm: 7
+      dockerfile: Dockerfile
+      build_flag_templates:
+        - "--platform=linux/arm/v7"
     - "calkoe/mqttcommander:{{ .Version }}-arm64v8"
-    use: buildx
-    goos: linux
-    goarch: arm64
-    dockerfile: Dockerfile
-    build_flag_templates:
-    - "--platform=linux/arm64/v8"
+      use: buildx
+      goos: linux
+      goarch: arm64
+      dockerfile: Dockerfile
+      build_flag_templates:
+        - "--platform=linux/arm64/v8"
 
 docker_manifests:
-- name_template: "calkoe/mqttcommander:{{ .Version }}"
+- name_template: "calkoe/mqttcommander:latest"
   image_templates:
   - "calkoe/mqttcommander:{{ .Version }}-amd64"
+  - "calkoe/mqttcommander:{{ .Version }}-armv6"
+  - "calkoe/mqttcommander:{{ .Version }}-armv7"
   - "calkoe/mqttcommander:{{ .Version }}-arm64v8"
 
 nfpms:
