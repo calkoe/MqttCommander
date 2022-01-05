@@ -1,6 +1,6 @@
 FROM alpine
 RUN apk add --no-cache tzdata
-COPY MqttCommander /
+#COPY MqttCommander /
 
 EXPOSE 9090/tcp
 VOLUME data
