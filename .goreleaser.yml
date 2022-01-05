@@ -1,3 +1,5 @@
+project_name: calkoe/mqttcommander
+
 builds:
   - env:
     - CGO_ENABLED=0
@@ -6,52 +8,54 @@ builds:
       - linux
     goarch:
       - amd64
-      - arm
       - arm64
     goarm:
-      - 6
-      - 7
+    - 6
+    - 7
 
 dockers:
   - image_templates:
-    - "calkoe/mqttcommander:{{ .Version }}-amd64"
-      use: buildx
-      goos: linux
-      goarch: amd64
-      dockerfile: Dockerfile
-      build_flag_templates:
-        - "--platform=linux/amd64"
-    - "calkoe/mqttcommander:{{ .Version }}-armv6"
-      use: buildx
-      goos: linux
-      goarch: arm
-      goarm: 6
-      dockerfile: Dockerfile
-      build_flag_templates:
-        - "--platform=linux/arm/v6"
-    - "calkoe/mqttcommander:{{ .Version }}-armv7"
-      use: buildx
-      goos: linux
-      goarch: arm
-      goarm: 7
-      dockerfile: Dockerfile
-      build_flag_templates:
-        - "--platform=linux/arm/v7"
-    - "calkoe/mqttcommander:{{ .Version }}-arm64v8"
-      use: buildx
-      goos: linux
-      goarch: arm64
-      dockerfile: Dockerfile
-      build_flag_templates:
-        - "--platform=linux/arm64/v8"
+    - "{{ .ProjectName }}:{{ .Version }}-amd64"
+    use: buildx
+    goos: linux
+    goarch: amd64
+    dockerfile: Dockerfile
+    build_flag_templates:
+    - "--platform=linux/amd64"
+  - image_templates:
+    - "{{ .ProjectName }}:{{ .Version }}-armv6"
+    use: buildx
+    goos: linux
+    goarch: arm
+    goarm: 6
+    dockerfile: Dockerfile
+    build_flag_templates:
+    - "--platform=linux/arm/v6"
+  - image_templates:
+    - "{{ .ProjectName }}:{{ .Version }}-armv7"
+    use: buildx
+    goos: linux
+    goarch: arm
+    goarm: 7
+    dockerfile: Dockerfile
+    build_flag_templates:
+    - "--platform=linux/arm/v7"
+  - image_templates:
+    - "{{ .ProjectName }}:{{ .Version }}-arm64v8"
+    use: buildx
+    goos: linux
+    goarch: arm64
+    dockerfile: Dockerfile
+    build_flag_templates:
+    - "--platform=linux/arm64/v8"
 
 docker_manifests:
-- name_template: "calkoe/mqttcommander:latest"
+- name_template: "{{ .ProjectName }}:latest"
   image_templates:
-  - "calkoe/mqttcommander:{{ .Version }}-amd64"
-  - "calkoe/mqttcommander:{{ .Version }}-armv6"
-  - "calkoe/mqttcommander:{{ .Version }}-armv7"
-  - "calkoe/mqttcommander:{{ .Version }}-arm64v8"
+  - "{{ .ProjectName }}:{{ .Version }}-amd64"
+  - "{{ .ProjectName }}:{{ .Version }}-armv6"
+  - "{{ .ProjectName }}:{{ .Version }}-armv7"
+  - "{{ .ProjectName }}:{{ .Version }}-arm64v8"
 
 nfpms:
   - maintainer: Calvin Köcher <calvin.koecher@alumni@fh-aachen.de>
