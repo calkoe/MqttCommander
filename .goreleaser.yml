@@ -10,8 +10,6 @@ builds:
 
 dockers:
   - image_templates:
-    - "calkoe/mqttcommander:latest"
-    - "calkoe/mqttcommander:{{ .Version }}"
     - "calkoe/mqttcommander:{{ .Version }}-amd64"
     use: buildx
     goos: linux
@@ -20,8 +18,6 @@ dockers:
     build_flag_templates:
     - "--platform=linux/amd64"
   - image_templates:
-    - "calkoe/mqttcommander:latest"
-    - "calkoe/mqttcommander:{{ .Version }}"
     - "calkoe/mqttcommander:{{ .Version }}-arm64v8"
     use: buildx
     goos: linux
@@ -29,6 +25,12 @@ dockers:
     dockerfile: Dockerfile
     build_flag_templates:
     - "--platform=linux/arm64/v8"
+
+docker_manifests:
+- name_template: "calkoe/mqttcommander:{{ .Version }}"
+  image_templates:
+  - "calkoe/mqttcommander:{{ .Version }}-amd64"
+  - "calkoe/mqttcommander:{{ .Version }}-arm64v8"
 
 nfpms:
   - maintainer: Calvin Köcher <calvin.koecher@alumni@fh-aachen.de>
