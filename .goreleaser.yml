@@ -7,22 +7,20 @@ builds:
   goarch:
   - amd64
   - arm64
+
 dockers:
 - image_templates:
-  - "calkoe/mqttcommander:{{ .Version }}-amd64"
+  - "calkoe/mqttcommander:latest"
+  - "calkoe/mqttcommander:{{ .Version }}"
   use: buildx
   dockerfile: Dockerfile
   build_flag_templates:
   - "--platform=linux/amd64"
 - image_templates:
-  - "calkoe/mqttcommander:{{ .Version }}-arm64"
+  - "calkoe/mqttcommander:latest"
+  - "calkoe/mqttcommander:{{ .Version }}"
   use: buildx
   goarch: arm64
   dockerfile: Dockerfile
   build_flag_templates:
   - "--platform=linux/arm64/v8"
-docker_manifests:
-- name_template: calkoe/mqttcommander:{{ .Version }}
-  image_templates:
-  - calkoe/mqttcommander:{{ .Version }}-amd64
-  - calkoe/mqttcommander:{{ .Version }}-arm64v8
