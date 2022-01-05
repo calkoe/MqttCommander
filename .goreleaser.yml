@@ -24,7 +24,7 @@ dockers:
 docker_manifests:
 - name_template:
   - "calkoe/mqttcommander:latest"
-  - calkoe/mqttcommander:{{ .Version }}
+  - "calkoe/mqttcommander:{{ .Version }}"
   image_templates:
-  - calkoe/mqttcommander:{{ .Version }}-amd64
-  - calkoe/mqttcommander:{{ .Version }}-arm64v8
+  - "calkoe/mqttcommander:{{ .Version }}-amd64"
+  - "calkoe/mqttcommander:{{ .Version }}-arm64v8"
