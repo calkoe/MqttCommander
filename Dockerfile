@@ -1,5 +1,5 @@
-FROM amd64/alpine
-RUN apk add --no-cache tzdata
+FROM ubuntu
+#RUN apk add --no-cache tzdata
 COPY MqttCommander /
 
 EXPOSE 9090/tcp

@@ -16,10 +16,9 @@ dockers:
     use: buildx
     goos: linux
     goarch: amd64
-    dockerfile: Dockerfile-amd64
+    dockerfile: Dockerfile
     build_flag_templates:
     - "--platform=linux/amd64"
-
   - image_templates:
     - "calkoe/mqttcommander:latest"
     - "calkoe/mqttcommander:{{ .Version }}"
@@ -27,7 +26,7 @@ dockers:
     use: buildx
     goos: linux
     goarch: arm64
-    dockerfile: Dockerfile-arm64v8
+    dockerfile: Dockerfile
     build_flag_templates:
     - "--platform=linux/arm64/v8"
 
