@@ -11,7 +11,6 @@ builds:
       - arm
       - arm64
     goarm:
-      - 6
       - 7
 
 dockers:
@@ -23,15 +22,6 @@ dockers:
     dockerfile: Dockerfile
     build_flag_templates:
     - "--platform=linux/amd64"
-  - image_templates:
-    - "{{ .ProjectName }}:{{ .Version }}-armv6"
-    use: buildx
-    goos: linux
-    goarch: arm
-    goarm: 6
-    dockerfile: Dockerfile
-    build_flag_templates:
-    - "--platform=linux/arm/v6"
   - image_templates:
     - "{{ .ProjectName }}:{{ .Version }}-armv7"
     use: buildx
@@ -54,7 +44,6 @@ docker_manifests:
 - name_template: "{{ .ProjectName }}:latest"
   image_templates:
   - "{{ .ProjectName }}:{{ .Version }}-amd64"
-  - "{{ .ProjectName }}:{{ .Version }}-armv6"
   - "{{ .ProjectName }}:{{ .Version }}-armv7"
   - "{{ .ProjectName }}:{{ .Version }}-arm64v8"
 
