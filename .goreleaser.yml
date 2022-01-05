@@ -7,7 +7,6 @@ builds:
   goarch:
   - amd64
   - arm64
-
 dockers:
 - image_templates:
   - "calkoe/mqttcommander:{{ .Version }}-amd64"
@@ -22,7 +21,6 @@ dockers:
   dockerfile: Dockerfile
   build_flag_templates:
   - "--platform=linux/arm64/v8"
-
 docker_manifests:
 - name_template:
   - "calkoe/mqttcommander:latest"
