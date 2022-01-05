@@ -1,6 +1,4 @@
-FROM ubuntu
-RUN apt-get update
-RUN apt-get install tzdata -y 
+FROM debian
 COPY MqttCommander /
 
 EXPOSE 9090/tcp
