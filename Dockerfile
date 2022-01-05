@@ -1,5 +1,5 @@
 FROM ubuntu
-RUN apk-get add --no-cache tzdata
+RUN apt-get --no-cache tzdata
 COPY MqttCommander /
 
 EXPOSE 9090/tcp
