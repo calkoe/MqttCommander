@@ -22,9 +22,7 @@ dockers:
   build_flag_templates:
   - "--platform=linux/arm64/v8"
 docker_manifests:
-- name_template:
-  - "calkoe/mqttcommander:latest"
-  - "calkoe/mqttcommander:{{ .Version }}"
+- name_template: calkoe/mqttcommander:{{ .Version }}
   image_templates:
-  - "calkoe/mqttcommander:{{ .Version }}-amd64"
-  - "calkoe/mqttcommander:{{ .Version }}-arm64v8"
+  - calkoe/mqttcommander:{{ .Version }}-amd64
+  - calkoe/mqttcommander:{{ .Version }}-arm64v8
