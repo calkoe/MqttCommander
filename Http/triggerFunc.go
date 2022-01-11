@@ -8,30 +8,24 @@ import (
 	"net/http"
 )
 
-func TriggerFunc(RuleId uint) {
+func TriggerFunc(RuleId uint, context interface{}) {
 
-	// Get Action
+	// Get Rule
 	rule, ok := Rule.Get(RuleId)
 	if !ok {
 		return
 	}
-
-	// Get Parent Automation
-	automation, ok := Automation.Get(rule.AutomationId)
-	if !ok {
-		return
-	}
+	module := rule.Module.(Http_Parsed_t)
 
 	// Run Action
-	if rule.Triggered != rule.Module.(Http_Parsed_t).Reverse && rule.Module.(Http_Parsed_t).Template != nil {
+	if rule.Triggered != module.Reverse && module.Template != nil {
+
 		var buf bytes.Buffer
-		rule.Module.(Http_Parsed_t).Template.Execute(&buf, automation)
+		rule.Module.(Http_Parsed_t).Template.Execute(&buf, context.(Automation.Automation_t))
 		if !Config.Get().Muted {
 			http.Get(buf.String())
 		}
-	}
 
-	// Stop RTT Measurement
-	Automation.RTTstop(rule.AutomationId)
+	}
 
 }

@@ -10,20 +10,14 @@ import (
 	"github.com/tidwall/sjson"
 )
 
-func TriggerFunc(RuleId uint) {
+func TriggerFunc(RuleId uint, context interface{}) {
 
-	// Get Action
+	// Get Rule
 	rule, ok := Rule.Get(RuleId)
 	if !ok {
 		return
 	}
 	module := rule.Module.(Mqtt_Parsed_t)
-
-	// Get Parent Automation
-	automation, ok := Automation.Get(rule.AutomationId)
-	if !ok {
-		return
-	}
 
 	// Run Action
 	if rule.Triggered != module.Reverse {
@@ -32,7 +26,7 @@ func TriggerFunc(RuleId uint) {
 		var value interface{}
 		if module.Template != nil {
 			var buf bytes.Buffer
-			module.Template.Execute(&buf, automation)
+			module.Template.Execute(&buf, context.(Automation.Automation_t))
 			value = Config.ParseType(buf.String())
 		} else {
 			value = module.Value
@@ -51,8 +45,5 @@ func TriggerFunc(RuleId uint) {
 			Client.Publish(module.Topic, 2, module.Retained, payload)
 		}
 	}
-
-	// Stop RTT Measurement
-	Automation.RTTstop(automation.Id)
 
 }

@@ -12,7 +12,7 @@ type Rule_t struct {
 	Tag            string
 	AutomationId   uint
 	Text           string
-	Trigger        func(uint)
+	TriggerFunc    func(uint, interface{})
 	Triggered      bool
 	Triggered_Time time.Time
 	Value          interface{}
@@ -136,14 +136,14 @@ func CountTriggeredByAutomationTagId(Tag string, AutomationId uint) (total uint,
 }
 
 // SetTrigger
-func SetTriggerFunc(id uint, triggerFunc func(uint)) {
+func SetTriggerFunc(id uint, triggerFunc func(uint, interface{})) {
 
 	mutex.Lock()
 	defer mutex.Unlock()
 
 	_, ok := rules[id]
 	if ok {
-		rules[id].Trigger = triggerFunc
+		rules[id].TriggerFunc = triggerFunc
 	}
 
 }

@@ -52,7 +52,7 @@ var idCounter uint
 var automations map[uint]*Automation_t
 var automationsFiles map[string]string
 
-//var mutex deadlock.RWMutex
+// var mutex deadlock.RWMutex
 var mutex sync.RWMutex
 
 // PUBLIC //
@@ -278,20 +278,6 @@ func RTTstart(id uint, t time.Time) {
 
 }
 
-// Stop RTT Measurement
-func RTTstop(id uint) {
-
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	Automation, ok := automations[id]
-	if ok && !Automation.RTTstart.IsZero() {
-		Automation.RTTduration = time.Since(Automation.RTTstart)
-		Automation.RTTstart = time.Time{}
-	}
-
-}
-
 // Set Automation Delay Active
 func SetDelayActive(id uint, active bool) {
 
@@ -346,7 +332,7 @@ func (Automation *Automation_t) setTrigger(trigger bool) {
 		}
 
 		//stopActions
-		Automation.startActions(false)
+		StartTriggerFunc(*Automation, false)
 
 	}
 
@@ -372,7 +358,7 @@ func (Automation *Automation_t) setTrigger(trigger bool) {
 			Automation.Delay_Timer.Reset(Automation.Delay)
 			Automation.Delay_Active = true
 		} else {
-			Automation.startActions(true)
+			StartTriggerFunc(*Automation, true)
 		}
 
 		// Setting Reminder
@@ -394,32 +380,25 @@ func (Automation *Automation_t) setTrigger(trigger bool) {
 		}).Debugf("[CONFIG] Automation changed [%04d]", Automation.Id)
 	}
 
+	// Set Automation Trigger
 	Automation.Triggered = trigger
 
-}
-
-// Start Actions (Public Version)
-func StartActions(id uint, start bool) {
-
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	Automation, ok := automations[id]
-	if ok {
-		Automation.startActions(start)
+	// RTTstop
+	if !Automation.RTTstart.IsZero() {
+		Automation.RTTduration = time.Since(Automation.RTTstart)
+		Automation.RTTstart = time.Time{}
 	}
 
 }
 
-// Start Actions
-func (Automation *Automation_t) startActions(start bool) {
+func StartTriggerFunc(automation Automation_t, trigger bool) {
 
-	for _, rule := range Rule.GetByAutomationId(Automation.Id) {
+	for _, rule := range Rule.GetByAutomationId(automation.Id) {
 
 		// Trigger Rule
-		if rule.Trigger != nil && (start || rule.Triggered) {
-			Rule.SetTrigger(rule.Id, start)
-			go rule.Trigger(rule.Id)
+		if rule.TriggerFunc != nil {
+			Rule.SetTrigger(rule.Id, trigger)
+			rule.TriggerFunc(rule.Id, automation)
 		}
 
 	}
