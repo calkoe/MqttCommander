@@ -64,15 +64,16 @@ After restarting the software, you will find an overview of the active automatio
 
 ## Create more complex rules:
 ```yml
-  - Name: Full Demo MQTT Automation
-    Mode: AND
-    Retrigger: true
-    Pause: 10s
-    Delay: 10s
-    Reminder: 1m
-    Constraints: 
-      - Mqtt : demo/sensor.value <= "3" -Reset 2s  -Timeout 5s -BlockRetained 0
-    Actions:
-      - Mqtt : demo/actuator = 1 -Retained 0
+- Name: Full Demo MQTT Automation
+  Mode: AND
+  Retrigger: true
+  Pause: 10s
+  Delay: 0s
+  Reminder: 1m
+  Constraints: 
+    - Mqtt : demo/sensor.value <= "3" (Reset 2s)  (Timeout 5s) (BlockRetained 0)
+  Actions:
+    - Mqtt : demo/actuator = 1 (Retained 0)
 ```
 Most of the functions are self-explanatory based on the examples, but detailed documentation will follow soon
+

@@ -1,6 +1,6 @@
 - Name: A - Check if Timeout is working
   Constraints: 
-    - Mqtt : _test/3/con1.value <= "3"  -Timeout 2s
+    - Mqtt : _test/3/con1.value <= 3 (Timeout 2s)
   Actions:
     - Mqtt : _test/3/a = 1 
 
@@ -25,3 +25,5 @@
     - Mqtt : _test/3/a = 1 
     - Mqtt : _test/3/b = 1 
     - Mqtt : _test/3/c = 1 
+  Actions:
+    - Mqtt : _test/3/success = 1 

@@ -6,8 +6,10 @@
     - Mqtt : _test/2/con2.val = -1
     - Mqtt : _test/2/con3.val = 1.9
     - Mqtt : _test/2/con4.val = -1.563
-    - Mqtt : _test/2/con5.val = "demo"
-    - Mqtt : _test/2/con6 = "-"
+    - Mqtt : _test/2/con5.val = demo
+    - Mqtt : _test/2/con6 = -
+    - Mqtt : _test/2/con7 = true
+    - Mqtt : _test/2/con8 = false
 
 - Name: A - Check Conditions (true)
   Constraints: 
@@ -15,8 +17,10 @@
     - Mqtt : _test/2/con2.val == -1
     - Mqtt : _test/2/con3.val < 2
     - Mqtt : _test/2/con4.val < -1.5
-    - Mqtt : _test/2/con5.val == "demo"
-    - Mqtt : _test/2/con6 == "-"
+    - Mqtt : _test/2/con5.val == demo
+    - Mqtt : _test/2/con6 == -
+    - Mqtt : _test/2/con7 == true
+    - Mqtt : _test/2/con8 == false
   Actions:
     - Mqtt : _test/2/a = 1 
 
@@ -25,14 +29,18 @@
   Mode: OR
   Constraints: 
     - Mqtt : _test/2/con1 != 1
-    - Mqtt : _test/2/con2.val ""= -1
+    - Mqtt : _test/2/con2.val = 1
     - Mqtt : _test/2/con3.val > 2
     - Mqtt : _test/2/con4.val > -1.5
-    - Mqtt : _test/2/con5.val != "demo"
-    - Mqtt : _test/2/con6 != "-"
+    - Mqtt : _test/2/con5.val != demo
+    - Mqtt : _test/2/con6 != -
+    - Mqtt : _test/2/con7 != true
+    - Mqtt : _test/2/con8 != false
   Actions:
     - Mqtt : _test/2/a = 0
 
 - Name: SUCCESS
   Constraints: 
     - Mqtt : _test/2/a = 1 
+  Actions:
+    - Mqtt : _test/2/success = 1 

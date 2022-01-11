@@ -3,11 +3,13 @@ package main
 import (
 	"time"
 
+	"MqttCommander/Automation"
 	"MqttCommander/Config"
 	"MqttCommander/Cron"
 	"MqttCommander/Dashbaord"
 	"MqttCommander/Http"
 	"MqttCommander/Mqtt"
+	"MqttCommander/Rule"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -19,19 +21,23 @@ func main() {
 		FullTimestamp: true,
 	})
 	log.SetLevel(log.DebugLevel)
-	log.Info("[MAIN] Welcome to MqttCommader!")
+	log.Info("[MAIN] Welcome to MqttCommader! By Calvin Köcher 2022 [calvin.koecher@alumni.fh-aachen.de]")
 
 	// Setup
-	Config.SetupConfig()
+	Config.Begin()
 	Config.ReadConfig()
-	Mqtt.Init()
-	Dashbaord.Init()
+	Automation.Begin()
+	Rule.Begin()
+	Mqtt.Begin()
+	Cron.Begin()
+	Http.Begin()
+	Dashbaord.Begin()
 
 	// Watch Changes
 	go func() {
 		for {
-			if Config.ReadAutomations() > 0 {
-				Config.Deploy()
+			if Automation.Read(Config.Get().ConfigPath) > 0 {
+				Automation.Deploy()
 				Mqtt.Deploy()
 				Cron.Deploy()
 				Http.Deploy()

@@ -5,6 +5,9 @@
     - Mqtt : _test/1/con1 = 1
     - Mqtt : _test/1/con2 = 1
     - Mqtt : _test/1/con3 = 1
+    - Mqtt : _test/1/con4.val = true
+    - Mqtt : _test/1/con5.demo.val = false
+    - Mqtt : _test/1/con6 = false
 
 - Name: Simple OR, Trigger after 2s Delay
   Mode: OR
@@ -17,12 +20,17 @@
 
 - Name: A - Simple AND, should be triggered after 4s if _test/1/con1 is repeated after _test/1/con2 and _test/1/con3 
   Constraints: 
-    - Mqtt : _test/1/con1  == 1
-    - Mqtt : _test/1/con2  == 1 -NoTrigger 1
-    - Mqtt : _test/1/con3  == 1 -NoTrigger 1
+    - Mqtt : _test/1/con1 == 1 
+    - Mqtt : _test/1/con2 == 1 (NoTrigger 1)
+    - Mqtt : _test/1/con3 == 1 (NoTrigger 1)
+    - Mqtt : _test/1/con4.val == true
+    - Mqtt : _test/1/con5.demo.val == false
+    - Mqtt : _test/1/con6 != true
   Actions:
     - Mqtt : _test/1/a = 1 
 
 - Name: SUCCESS
   Constraints: 
-    - Mqtt : _test/1/a = 1 
+    - Mqtt : _test/1/a = 1
+  Actions:
+    - Mqtt : _test/1/success = 1  

@@ -1,0 +1,11 @@
+- Name: INIT Test 5
+  Triggered: true
+  Delay: 1s
+  Actions:
+    - Mqtt : _test/5/con1.demo.demo = 5
+
+- Name: SUCCESS
+  Constraints: 
+    - Mqtt : _test/5/con1.demo.demo == 5
+  Actions:
+    - Mqtt : _test/5/success = 1 

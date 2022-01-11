@@ -2,53 +2,57 @@ package Http
 
 import (
 	"MqttCommander/Config"
-	"bytes"
+	"MqttCommander/Rule"
 	"html/template"
-	"net/http"
+	"regexp"
+	"strconv"
 
 	log "github.com/sirupsen/logrus"
 )
 
+type Http_Parsed_t struct {
+	Url      string
+	Reverse  bool
+	Template *template.Template
+}
+
+var Expression *regexp.Regexp
+
+func Begin() {
+
+	Expression = regexp.MustCompile(`^(?P<Url>[^\n\(]*)`)
+
+}
+
 func Deploy() {
 
-	for _, AutomationCopy := range Config.CopyAutomations() {
+	// Setup Actions
+	for _, rule := range Rule.GetAllByTag("action/mqtt") {
 
-		// Setup Actions
-		for Action_k := range AutomationCopy.Actions {
+		if !rule.Initialized {
 
-			ActionCopy := Config.CopyAction(&AutomationCopy.Actions[Action_k])
-			if ActionCopy.Http != "" && !ActionCopy.Initialized {
+			module := Http_Parsed_t{}
 
-				AutomationCopy.Actions[Action_k].Mutex.Lock()
-				Action := &AutomationCopy.Actions[Action_k]
+			// Parse Arguments
+			match := Expression.FindStringSubmatch(rule.Text)
+			if len(match) == 2 {
 
-				Action.Initialized = true
+				module.Url = match[1]
+				module.Reverse, _ = strconv.ParseBool(Config.FindParm(`\(Reverse\s+(\S+)\)`, rule.Text))
 
-				// Parse Template
+				// Prepare Template
 				var err error
-				Action.Http_Parsed.Template, err = template.New("value").Parse(ActionCopy.Http)
+				module.Template, err = template.New("value").Parse(rule.Text)
 				if err != nil {
 					log.Errorf("[HTTP] error while parsing Template: %s", err)
 					return
 				}
 
-				// Setup Trigger Handler
-				Action.Trigger = func(AutomationCopy Config.Automation_t, ActionCopy Config.Action_t) {
+				// Save Changes
+				Rule.SetModule(rule.Id, module)
 
-					// Run Action
-					if ActionCopy.Triggered && Action.Http_Parsed.Template != nil {
-						var buf bytes.Buffer
-						Action.Http_Parsed.Template.Execute(&buf, AutomationCopy)
-						http.Get(buf.String())
-					}
-
-					// Stop RTT Measurement
-					Config.RTTstop(AutomationCopy.Id)
-
-				}
-
-				AutomationCopy.Actions[Action_k].Mutex.Unlock()
-
+				// Setup SetTrigger Handler
+				Rule.SetTriggerFunc(rule.Id, TriggerFunc)
 			}
 
 		}

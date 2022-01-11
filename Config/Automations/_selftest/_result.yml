@@ -1,0 +1,7 @@
+- Name: SUCCESS
+  Constraints: 
+    - Mqtt : _test/1/success == 1
+    - Mqtt : _test/2/success == 1
+    - Mqtt : _test/3/success == 1
+    - Mqtt : _test/4/success == 1
+    - Mqtt : _test/5/success == 1

@@ -1,81 +1,70 @@
 package Cron
 
 import (
+	"MqttCommander/Automation"
 	"MqttCommander/Config"
+	"MqttCommander/Rule"
 	"strconv"
 	"time"
 
 	"github.com/gorhill/cronexpr"
+	log "github.com/sirupsen/logrus"
 )
+
+type Cron_Parsed_t struct {
+	Expression  *cronexpr.Expression
+	NextTime    time.Time
+	Cron_Timer  *time.Timer
+	Reset       time.Duration
+	Reset_Timer *time.Timer
+	NoTrigger   bool
+}
+
+func Begin() {
+
+}
 
 func Deploy() {
 
-	ConfigFileCopy := Config.CopyConfigFile()
+	config := Config.Get()
 
-	for id, AutomationCopy := range Config.CopyAutomations() {
+	// Setup Constraints
+	for _, rule := range Rule.GetAllByTag("constraint/cron") {
 
-		// Setup Constraints
-		for Constraint_k := range AutomationCopy.Constraints {
+		if !rule.Initialized {
 
-			ConstraintCopy := Config.CopyConstraint(&AutomationCopy.Constraints[Constraint_k])
-			if ConstraintCopy.Cron != "" && !ConstraintCopy.Initialized {
+			module := Cron_Parsed_t{}
 
-				AutomationCopy.Constraints[Constraint_k].Mutex.Lock()
-				Constraint := &AutomationCopy.Constraints[Constraint_k]
-
-				Constraint.Initialized = true
-
-				Constraint.Cron_Parsed.Expression, _ = cronexpr.Parse(Config.Find(`^\s*((?:[^-][^\s]*\s?)+|@[a-z]+)`, Constraint.Cron))
-				Constraint.Cron_Parsed.Reset, _ = time.ParseDuration(Config.Find(`-Reset\s+(\S+)`, Constraint.Cron))
-				Constraint.Cron_Parsed.NoTrigger, _ = strconv.ParseBool(Config.Find(`-NoTrigger\s+(\S+)`, Constraint.Cron))
-
-				// Add Reset Timer
-				if Constraint.Cron_Parsed.Reset > 0 {
-					Constraint.Cron_Parsed.Reset_Timer = time.NewTimer(Constraint.Cron_Parsed.Reset)
-					Constraint.Cron_Parsed.Reset_Timer.Stop()
-					go func(id int, Constraint *Config.Constraint_t) {
-						_, ok := Config.CopyAutomation(id)
-						for ok {
-							<-Constraint.Cron_Parsed.Reset_Timer.C
-							_, ok := Config.CopyAutomation(id)
-							if ok {
-								Constraint.Mutex.Lock()
-								setTriggered(id, Constraint, false)
-								Constraint.Mutex.Unlock()
-							} else {
-								break
-							}
-						}
-					}(id, Constraint)
-				}
-
-				// Add Cron Trigger
-				Constraint.Cron_Parsed.NextTime = Constraint.Cron_Parsed.Expression.Next(time.Now().In(ConfigFileCopy.Timezone_parsed))
-				Constraint.Cron_Parsed.Cron_Timer = time.NewTimer(Constraint.Cron_Parsed.NextTime.Sub(time.Now().In(ConfigFileCopy.Timezone_parsed)))
-				go func(id int, Constraint *Config.Constraint_t) {
-					_, ok := Config.CopyAutomation(id)
-					for ok {
-						<-Constraint.Cron_Parsed.Cron_Timer.C
-						_, ok := Config.CopyAutomation(id)
-						if ok {
-							Constraint.Mutex.Lock()
-							setTriggered(id, Constraint, true)
-							Constraint.Cron_Parsed.NextTime = Constraint.Cron_Parsed.Expression.Next(time.Now().In(ConfigFileCopy.Timezone_parsed))
-							Constraint.Cron_Parsed.Cron_Timer.Reset(Constraint.Cron_Parsed.NextTime.Sub(time.Now().In(ConfigFileCopy.Timezone_parsed)))
-							// Reset immediately if no Reset timer defined
-							if Constraint.Cron_Parsed.Reset == 0 {
-								setTriggered(id, Constraint, false)
-							}
-							Constraint.Mutex.Unlock()
-						} else {
-							break
-						}
-					}
-				}(id, Constraint)
-
-				AutomationCopy.Constraints[Constraint_k].Mutex.Unlock()
-
+			// Parse Arguments
+			var err error
+			module.Expression, err = cronexpr.Parse(Config.FindParm(`^\s*(?P<Value>[^\n\(]*)`, rule.Text))
+			if err != nil {
+				log.Errorf("[CRON] Error while parsing expression %s ", err)
+				return
 			}
+			module.Reset, _ = time.ParseDuration(Config.FindParm(`\(Reset\s+(\S+)\)`, rule.Text))
+			module.NoTrigger, _ = strconv.ParseBool(Config.FindParm(`\(NoTrigger\s+(\S+)\)`, rule.Text))
+
+			// Add Reset Timer
+			if module.Reset > 0 {
+				module.Reset_Timer = time.NewTimer(module.Reset)
+				module.Reset_Timer.Stop()
+			}
+
+			// Add Cron SetTrigger
+			module.NextTime = module.Expression.Next(time.Now().In(config.Timezone_parsed))
+			module.Cron_Timer = time.NewTimer(module.NextTime.Sub(time.Now().In(config.Timezone_parsed)))
+
+			// Save Changes
+			Rule.SetModule(rule.Id, module)
+
+			// Add Reset Timer Task
+			if module.Reset_Timer != nil {
+				go ResetTimerTask(rule.Id)
+			}
+
+			// Add Cron Task
+			go CronTask(rule.Id)
 
 		}
 
@@ -83,26 +72,21 @@ func Deploy() {
 
 }
 
-func setTriggered(id int, Constraint *Config.Constraint_t, triggered bool) {
+func SetTrigger(RuleId uint, trigger bool) {
 
-	if triggered {
+	rule, ok := Rule.Get(RuleId)
+	if ok {
 
-		// Set Last Triggered
-		Constraint.Triggered_Time = time.Now()
+		module := rule.Module.(Cron_Parsed_t)
 
 		// Reset Reset Timer
-		if Constraint.Cron_Parsed.Reset > 0 {
-			Constraint.Cron_Parsed.Reset_Timer.Reset(Constraint.Cron_Parsed.Reset)
+		if trigger && module.Reset > 0 {
+			module.Reset_Timer.Reset(module.Reset)
 		}
 
+		Rule.SetTrigger(RuleId, trigger)
+		Automation.CheckTriggered(rule.AutomationId, rule.Module.(Cron_Parsed_t).NoTrigger)
+
 	}
-
-	Constraint.Triggered = triggered
-
-	// CheckTriggered
-	NoTrigger := Constraint.Mqtt_Parsed.NoTrigger
-	Constraint.Mutex.Unlock()
-	Config.CheckTriggered(id, NoTrigger)
-	Constraint.Mutex.Lock()
 
 }

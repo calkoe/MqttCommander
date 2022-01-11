@@ -9,13 +9,28 @@
   Delay: 0s
   Reminder: 1m
   Constraints: 
-    - Mqtt : demo/sensor.value <= "3" -Reset 2s  -Timeout 5s -BlockRetained 0
+    - Mqtt : demo/sensor.value <= "3" (Reset 2s)  (Timeout 5s) (BlockRetained 0)
   Actions:
-    - Mqtt : demo/actuator = 1 -Retained 0
+    - Mqtt : demo/actuator = 1 (Retained 0)
 
 - Name: Full Demo CRON Automation
   Delay: 10s
   Constraints: 
-    - Cron : "* * * * *"
+    - Cron : "* * * * * *"
   Actions:
-    - Mqtt : pushover/notification = "CRON AUSGELÖST"
+    - Mqtt : demo/cron = CRON
+
+- Name: Simple MQTT Rule
+  Constraints: 
+    - Mqtt : demo1 == true
+    - Mqtt : demo2 > 99.3
+  Actions:
+    - Mqtt : demo3 = 1
+
+- Name: Simple MQTT Rule (OR)
+  Mode: OR
+  Constraints: 
+    - Mqtt : demo4 == true
+    - Mqtt : demo5 > 99.3
+  Actions:
+    - Mqtt : demo6 = 1

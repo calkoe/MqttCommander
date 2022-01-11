@@ -1,0 +1,33 @@
+- Name: INIT Test 4
+  Triggered: true
+  Delay: 2s
+  Actions:
+    - Mqtt : _test/4/con1 = {{ .Name }}
+    - Mqtt : _test/4/con2.val = {{ .Name }}
+
+- Name: -5
+  Triggered: true
+  Delay: 3s
+  Actions:
+    - Mqtt : _test/4/con3 = {{ .Name }}
+    - Mqtt : _test/4/con4.val = {{ .Name }}
+
+- Name: 99
+  Delay: 2s
+  Constraints: 
+    - Mqtt : _test/3/con1.value <= 3 (Timeout 2s)
+  Actions:
+    - Mqtt : _test/4/con5 = {{ .Name }}
+    - Mqtt : _test/4/con6.val = {{ .Name }}
+
+
+- Name: SUCCESS
+  Constraints: 
+    - Mqtt : _test/4/con1     = INIT Test 4
+    - Mqtt : _test/4/con2.val = INIT Test 4
+    - Mqtt : _test/4/con3     = -5
+    - Mqtt : _test/4/con4.val = -5
+    - Mqtt : _test/4/con5     = 99
+    - Mqtt : _test/4/con6.val = 99
+  Actions:
+    - Mqtt : _test/4/success = 1 
