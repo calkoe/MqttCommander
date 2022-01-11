@@ -225,8 +225,8 @@ func CheckTriggered(id uint, NoTrigger bool) {
 // Get Automation
 func Get(id uint) (Automation_t, bool) {
 
-	mutex.Lock()
-	defer mutex.Unlock()
+	mutex.RLock()
+	defer mutex.RUnlock()
 
 	automation, ok := automations[id]
 	if ok {
@@ -240,8 +240,8 @@ func Get(id uint) (Automation_t, bool) {
 // Get all Automations
 func GetAll() []Automation_t {
 
-	mutex.Lock()
-	defer mutex.Unlock()
+	mutex.RLock()
+	defer mutex.RUnlock()
 
 	ret := []Automation_t{}
 	for id := range automations {
@@ -291,15 +291,16 @@ func SetDelayActive(id uint, active bool) {
 
 }
 
-// Set Automation Triggered (Public Version)
-func SetTrigger(id uint, setTrigger bool) {
+func StartTriggerFunc(id uint, trigger bool) {
 
-	mutex.Lock()
-	defer mutex.Unlock()
+	for _, rule := range Rule.GetByAutomationId(id) {
 
-	Automation, ok := automations[id]
-	if ok {
-		Automation.setTrigger(setTrigger)
+		// Trigger Rule
+		if rule.TriggerFunc != nil {
+			Rule.SetTrigger(rule.Id, trigger)
+			rule.TriggerFunc(rule.Id)
+		}
+
 	}
 
 }
@@ -332,7 +333,9 @@ func (Automation *Automation_t) setTrigger(trigger bool) {
 		}
 
 		//stopActions
-		StartTriggerFunc(*Automation, false)
+		mutex.Unlock()
+		StartTriggerFunc(Automation.Id, false)
+		mutex.Lock()
 
 	}
 
@@ -358,7 +361,9 @@ func (Automation *Automation_t) setTrigger(trigger bool) {
 			Automation.Delay_Timer.Reset(Automation.Delay)
 			Automation.Delay_Active = true
 		} else {
-			StartTriggerFunc(*Automation, true)
+			mutex.Unlock()
+			StartTriggerFunc(Automation.Id, true)
+			mutex.Lock()
 		}
 
 		// Setting Reminder
@@ -387,20 +392,6 @@ func (Automation *Automation_t) setTrigger(trigger bool) {
 	if !Automation.RTTstart.IsZero() {
 		Automation.RTTduration = time.Since(Automation.RTTstart)
 		Automation.RTTstart = time.Time{}
-	}
-
-}
-
-func StartTriggerFunc(automation Automation_t, trigger bool) {
-
-	for _, rule := range Rule.GetByAutomationId(automation.Id) {
-
-		// Trigger Rule
-		if rule.TriggerFunc != nil {
-			Rule.SetTrigger(rule.Id, trigger)
-			rule.TriggerFunc(rule.Id, automation)
-		}
-
 	}
 
 }

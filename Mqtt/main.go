@@ -85,12 +85,12 @@ func Begin() {
 
 	//create and start a client using the above ClientOptions
 	Client = MQTT.NewClient(opts)
-	Client.Connect()
-	/*token := Client.Connect()
+	//Client.Connect()
+	token := Client.Connect()
 	token.Wait()
 	if token.Error() != nil {
 		log.Errorf("[MQTT] Connection to MQTT server failed, error: %s", token.Error())
-	}*/
+	}
 
 }
 

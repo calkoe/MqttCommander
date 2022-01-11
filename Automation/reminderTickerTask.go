@@ -4,9 +4,9 @@ func reminderTickerTask(AutomationId uint) {
 	automation, ok := Get(AutomationId)
 	for ok {
 		<-automation.Reminder_Ticker.C
-		automation, ok := Get(AutomationId)
+		_, ok := Get(AutomationId)
 		if ok {
-			StartTriggerFunc(automation, true)
+			StartTriggerFunc(AutomationId, true)
 		} else {
 			break
 		}

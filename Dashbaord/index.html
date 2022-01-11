@@ -30,7 +30,7 @@
             <div class="container-fluid ">
                 <a class="navbar-brand" href="/">{{ .ConfigFile.Name }} ({{.AutomationsLen}} Automations)</a>
                 {{.LocalTime}}
-                {{ if .MqttClientIsConnectionOpen  }} <span class="badge bg-success">Mqtt connected</span> {{else}} <span class="badge bg-error">Mqtt not connected</span> {{ end }}
+                {{ if .MqttClientIsConnectionOpen  }} <span class="badge bg-success">Mqtt connected</span> {{else}} <span class="badge bg-warning">Mqtt not connected</span> {{ end }}
                 {{ if .ConfigFile.Muted  }} <span class="badge bg-warning">System Muted</span> {{ end }}
                 <span class="badge bg-success"> {{ .MemMib  }} MiB</span>
             </div>

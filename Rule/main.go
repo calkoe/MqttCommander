@@ -12,7 +12,7 @@ type Rule_t struct {
 	Tag            string
 	AutomationId   uint
 	Text           string
-	TriggerFunc    func(uint, interface{})
+	TriggerFunc    func(uint)
 	Triggered      bool
 	Triggered_Time time.Time
 	Value          interface{}
@@ -43,8 +43,8 @@ func Begin() {
 // Get rule
 func Get(id uint) (Rule_t, bool) {
 
-	mutex.Lock()
-	defer mutex.Unlock()
+	mutex.RLock()
+	defer mutex.RUnlock()
 
 	rule, ok := rules[id]
 	if ok {
@@ -58,8 +58,8 @@ func Get(id uint) (Rule_t, bool) {
 // GetAll
 func GetAll() []Rule_t {
 
-	mutex.Lock()
-	defer mutex.Unlock()
+	mutex.RLock()
+	defer mutex.RUnlock()
 
 	ret := []Rule_t{}
 	for k, _ := range rules {
@@ -72,8 +72,8 @@ func GetAll() []Rule_t {
 // GetAllByTag
 func GetAllByTag(Tag string) []Rule_t {
 
-	mutex.Lock()
-	defer mutex.Unlock()
+	mutex.RLock()
+	defer mutex.RUnlock()
 
 	ret := []Rule_t{}
 	for k, rule := range rules {
@@ -88,8 +88,8 @@ func GetAllByTag(Tag string) []Rule_t {
 // GetByAutomationId
 func GetByAutomationId(AutomationId uint) []Rule_t {
 
-	mutex.Lock()
-	defer mutex.Unlock()
+	mutex.RLock()
+	defer mutex.RUnlock()
 
 	ret := []Rule_t{}
 	for k, rule := range rules {
@@ -104,8 +104,8 @@ func GetByAutomationId(AutomationId uint) []Rule_t {
 // GetByAutomationTagId
 func GetByAutomationTagId(Tag string, AutomationId uint) []Rule_t {
 
-	mutex.Lock()
-	defer mutex.Unlock()
+	mutex.RLock()
+	defer mutex.RUnlock()
 
 	ret := []Rule_t{}
 	for k, rule := range rules {
@@ -120,8 +120,8 @@ func GetByAutomationTagId(Tag string, AutomationId uint) []Rule_t {
 // CountTriggeredByAutomationTagId
 func CountTriggeredByAutomationTagId(Tag string, AutomationId uint) (total uint, triggered uint) {
 
-	mutex.Lock()
-	defer mutex.Unlock()
+	mutex.RLock()
+	defer mutex.RUnlock()
 
 	for _, rule := range rules {
 		if rule.Tag == Tag && rule.AutomationId == AutomationId {
@@ -136,7 +136,7 @@ func CountTriggeredByAutomationTagId(Tag string, AutomationId uint) (total uint,
 }
 
 // SetTrigger
-func SetTriggerFunc(id uint, triggerFunc func(uint, interface{})) {
+func SetTriggerFunc(id uint, triggerFunc func(uint)) {
 
 	mutex.Lock()
 	defer mutex.Unlock()

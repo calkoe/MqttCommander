@@ -4,9 +4,9 @@ func delayTimerTask(AutomationId uint) {
 	automation, ok := Get(AutomationId)
 	for ok {
 		<-automation.Delay_Timer.C
-		automation, ok := Get(AutomationId)
+		_, ok := Get(AutomationId)
 		if ok {
-			StartTriggerFunc(automation, true)
+			StartTriggerFunc(AutomationId, true)
 			SetDelayActive(AutomationId, false)
 		} else {
 			break

@@ -28,10 +28,10 @@ func main() {
 	Config.ReadConfig()
 	Automation.Begin()
 	Rule.Begin()
+	Dashbaord.Begin()
 	Mqtt.Begin()
 	Cron.Begin()
 	Http.Begin()
-	Dashbaord.Begin()
 
 	// Watch Changes
 	go func() {
