@@ -40,6 +40,15 @@ The rules are saved in ".yml" files. These are saved in the "Automations /" fold
 <hr>
 
 ## Getting Started:
+
+QuickStart on Docker:
+```
+docker run -it -p 9090:9090 -v mqttcommanderdata:/data --name mqttcommander calkoe/mqttcommander
+```
+Note: Your Config files will be stored at the "mqttcommanderdata" volume.
+
+<br/>
+
 Use one of this pre-Compiled Binarys, at the first start an order with the name "Config" is automatically created, here you will also find some sample files.
 
 [Download MqttCommander](https://github.com/calkoe/MqttCommander/releases)
