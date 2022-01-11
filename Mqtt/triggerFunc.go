@@ -29,21 +29,21 @@ func TriggerFunc(RuleId uint) {
 	if rule.Triggered != module.Reverse {
 
 		// Run Template if exists
-		var value string
+		var value interface{}
 		if module.Template != nil {
 			var buf bytes.Buffer
 			module.Template.Execute(&buf, automation)
-			value = buf.String()
+			value = Config.ParseType(buf.String())
 		} else {
-			value = fmt.Sprintf("%v", module.Value)
+			value = module.Value
 		}
 
-		// Embedd into Object
+		// Format Value
 		var payload string
 		if module.Object != "" {
 			payload, _ = sjson.Set("{}", module.Object, value)
 		} else {
-			payload = value
+			payload = fmt.Sprintf("%v", value)
 		}
 
 		// Publish payload
