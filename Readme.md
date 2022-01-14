@@ -2,7 +2,7 @@
 ![IMG_0EC4D6E1BBAC-1](https://user-images.githubusercontent.com/26646066/141022858-2f78ebd0-f7a2-4eee-afb0-aac1657fe2fe.jpeg)
 
 
-# ⚙ MQTT COMMANDER - A robust and easy to use MQTT rule engine
+# ⚙ MQTT COMMANDER - A fast, robust and easy to use MQTT rule engine
 
 ## How does ist work an what can i do with it ?
 
@@ -31,11 +31,14 @@ The rules are saved in ".yml" files. These are saved in the "Automations /" fold
 ## Features
 * Supports JSON encoded MQTT Messages (e.g. **mytopic/sensor.value**)
 * Supports all common comparators [<,>,<=,>=,==,!=]
+* Supports RegEx in String compararison
 * Supports Cron triggered events
 * Supports HTTP calls
-* Supports LIVE reload of config files
+* LIVE reload of config files
+* Templates
 * Special functions, like Timeout, reminder and auto reset of rules
-* Simple Web-Dashbaord ro review the Status of your Rules 
+* Web-Dashbaord ro review the Status of your Rules 
+* Focus on reliability and speed
 
 <hr>
 
@@ -84,5 +87,12 @@ After restarting the software, you will find an overview of the active automatio
   Actions:
     - Mqtt : demo/actuator = 1 (Retained 0)
 ```
+
 Most of the functions are self-explanatory based on the examples, but detailed documentation will follow soon
 
+## Roadmap:
+- [x] Add Support for Multi-Level JSON Objects
+- [ ] Complete Documentation
+- [ ] Add Support for XOR Rules
+- [ ] Redesign File-Overview in Dashboard
+- [ ] Add Browser File-Editor
