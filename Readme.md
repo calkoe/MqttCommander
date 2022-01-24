@@ -93,6 +93,7 @@ Most of the functions are self-explanatory based on the examples, but detailed d
 ## Roadmap:
 - [x] Add Support for Multi-Level JSON Objects
 - [ ] Complete Documentation
+- [ ] Add Rule validation
+- [ ] Dashbaord handle Text-Overflow
 - [ ] Add Support for XOR Rules
 - [ ] Redesign File-Overview in Dashboard
-- [ ] Add Browser File-Editor
