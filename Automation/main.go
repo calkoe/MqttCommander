@@ -167,7 +167,7 @@ func Deploy() {
 				"Path":        Automation.Path,
 				"Constraints": len(Automation.Constraints),
 				"Actions":     len(Automation.Actions),
-			}).Debugf("[CONFIG] Deploy Automation [%04d]", id)
+			}).Debugf("[CONFIG] Deploy Automation [%06d]", id)
 
 			// Add Delay Timer
 			if Automation.Delay > 0 {
@@ -208,7 +208,15 @@ func CheckTriggered(id uint, NoTrigger bool) {
 	total2, triggered2 := Rule.CountTriggeredByAutomationTagId("constraint/mqtt", id)
 
 	// Set
-	if Automation.Mode == "AND" && triggered1+triggered2 == total1+total2 {
+	if Automation.Mode == "NAND" && triggered1+triggered2 == 0 {
+		if !NoTrigger {
+			Automation.setTrigger(true)
+		}
+	} else if Automation.Mode == "AND" && triggered1+triggered2 == total1+total2 {
+		if !NoTrigger {
+			Automation.setTrigger(true)
+		}
+	} else if Automation.Mode == "XOR" && triggered1+triggered2 == 1 {
 		if !NoTrigger {
 			Automation.setTrigger(true)
 		}
@@ -382,7 +390,7 @@ func (Automation *Automation_t) setTrigger(trigger bool) {
 			"Path":      Automation.Path,
 			"Value":     Automation.Value,
 			"Triggered": trigger,
-		}).Debugf("[CONFIG] Automation changed [%04d]", Automation.Id)
+		}).Debugf("[CONFIG] Automation changed [%06d]", Automation.Id)
 	}
 
 	// Set Automation Trigger

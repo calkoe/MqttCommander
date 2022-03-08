@@ -72,7 +72,13 @@ func Begin() {
 		// Resubscripe
 		for _, rule := range Rule.GetAllByTag("constraint/mqtt") {
 			if rule.Initialized {
-				Client.Subscribe(rule.Module.(Mqtt_Parsed_t).Topic, 2, nil)
+				go func(rule Rule.Rule_t) {
+					if token := Client.Subscribe(rule.Module.(Mqtt_Parsed_t).Topic, 2, nil); !token.WaitTimeout(5*time.Second) || token.Error() != nil {
+						Rule.SetError(rule.Id, "[MQTT] Error while subscribing to topic %v ", token.Error())
+					} else {
+						Rule.SetError(rule.Id, "")
+					}
+				}(rule)
 			}
 		}
 	})
@@ -85,11 +91,8 @@ func Begin() {
 
 	//create and start a client using the above ClientOptions
 	Client = MQTT.NewClient(opts)
-	//Client.Connect()
-	token := Client.Connect()
-	token.Wait()
-	if token.Error() != nil {
-		log.Errorf("[MQTT] Connection to MQTT server failed, error: %s", token.Error())
+	if token := Client.Connect(); !token.WaitTimeout(5*time.Second) || token.Error() != nil {
+		log.Errorf("[MQTT] Connection to MQTT server failed, error: %v", token.Error())
 	}
 
 }
@@ -145,7 +148,13 @@ func Deploy() {
 				Rule.SetModule(rule.Id, module)
 
 				// Add Subscription
-				Client.Subscribe(module.Topic, 2, nil)
+				go func(rule Rule.Rule_t) {
+					if token := Client.Subscribe(module.Topic, 2, nil); !token.WaitTimeout(5*time.Second) || token.Error() != nil {
+						Rule.SetError(rule.Id, "[MQTT] Error while subscribing to topic %v ", token.Error())
+					} else {
+						Rule.SetError(rule.Id, "")
+					}
+				}(rule)
 
 				// Add Reset Timer Task
 				if module.Reset_Timer != nil {
@@ -197,8 +206,10 @@ func Deploy() {
 					var err error
 					module.Template, err = template.New("value").Parse(module.Value.(string))
 					if err != nil {
-						log.Errorf("[MQTT] error while parsing Template: %s", err)
+						Rule.SetError(rule.Id, "[MQTT] error while parsing Template: %v", err)
 						return
+					} else {
+						Rule.SetError(rule.Id, "")
 					}
 				}
 

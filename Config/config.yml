@@ -1,4 +1,4 @@
 # System Settings
 Name: MqttCommander System Name
 Timezone: Europe/Berlin
-MqttUri: tcp://user:password@broker:1883/
+MqttUri: tcp://user:password@test.mosquitto.org:1883/

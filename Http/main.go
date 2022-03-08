@@ -6,8 +6,6 @@ import (
 	"html/template"
 	"regexp"
 	"strconv"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type Http_Parsed_t struct {
@@ -44,8 +42,10 @@ func Deploy() {
 				var err error
 				module.Template, err = template.New("value").Parse(rule.Text)
 				if err != nil {
-					log.Errorf("[HTTP] error while parsing Template: %s", err)
+					Rule.SetError(rule.Id, "[HTTP] error while parsing Template: %v", err)
 					return
+				} else {
+					Rule.SetError(rule.Id, "")
 				}
 
 				// Save Changes

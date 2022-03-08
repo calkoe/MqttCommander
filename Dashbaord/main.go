@@ -6,6 +6,7 @@ import (
 	"MqttCommander/Mqtt"
 	"MqttCommander/Rule"
 	_ "embed"
+	"fmt"
 	"net/url"
 	"runtime"
 	"sort"
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/compress"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -34,6 +36,9 @@ type tmplData_t struct {
 	AutomationsLen             int
 	Files                      []tmplData_File_t
 	MemMib                     float32
+	NumCPU                     int
+	NumGoroutine               int
+	BodyOnly                   string
 }
 
 type tmplData_File_t struct {
@@ -50,6 +55,17 @@ func Begin() {
 	app := fiber.New(fiber.Config{
 		DisableStartupMessage: true,
 	})
+
+	// Or extend your config for customization
+	/*app.Use(cache.New(cache.Config{
+		Expiration: 500 * time.Millisecond,
+		//CacheControl: true,
+	}))*/
+
+	// Use Compression
+	app.Use(compress.New(compress.Config{
+		Level: compress.LevelBestSpeed,
+	}))
 
 	// Parse Template
 	Template, err := template.New("index.html").Funcs(template.FuncMap{
@@ -80,11 +96,15 @@ func Begin() {
 			}
 			switch v.(type) {
 			case bool:
-				return v
+				return fmt.Sprintf("<i>%t</i>", v)
 			case float64:
-				return v
+				return strings.Trim(strings.Trim(fmt.Sprintf("%f", v), "0"), ".")
 			case string:
-				return "\"" + v.(string) + "\""
+				if v.(string) == "" {
+					return ""
+				} else {
+					return "\"" + v.(string) + "\""
+				}
 			default:
 				return "[" + v.(string) + "]"
 			}
@@ -98,6 +118,7 @@ func Begin() {
 	// Provide Bootstrap
 	app.Get("/bootstrap.min.css", func(c *fiber.Ctx) error {
 		c.Set("Content-Type", "text/css; charset=utf-8")
+		c.Set("Cache-Control", "public, max-age=999")
 		c.SendString(bootstrap_min_css)
 		return nil
 	})
@@ -114,6 +135,9 @@ func Begin() {
 		var MemStats runtime.MemStats
 		runtime.ReadMemStats(&MemStats)
 		tmplData.MemMib = float32(MemStats.Alloc / 1024 / 1024)
+		tmplData.NumCPU = runtime.NumCPU()
+		tmplData.NumGoroutine = runtime.NumGoroutine()
+		tmplData.BodyOnly = string(c.Request().Header.Peek("body-only"))
 
 		// Get Automations
 		Automations := Automation.GetAll()

@@ -29,7 +29,12 @@ func TriggerFunc(RuleId uint) {
 		var buf bytes.Buffer
 		rule.Module.(Http_Parsed_t).Template.Execute(&buf, automation)
 		if !Config.Get().Muted {
-			http.Get(buf.String())
+			_, err := http.Get(buf.String())
+			if err != nil {
+				Rule.SetError(rule.Id, "[HTTP] error while sending Reqest: %v", err)
+			} else {
+				Rule.SetError(rule.Id, "")
+			}
 		}
 
 	}

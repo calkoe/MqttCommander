@@ -1,10 +1,12 @@
 package Rule
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/sasha-s/go-deadlock"
+	log "github.com/sirupsen/logrus"
 )
 
 type Rule_t struct {
@@ -20,6 +22,7 @@ type Rule_t struct {
 	Initialized    bool
 	Mutex          deadlock.RWMutex
 	Module         interface{}
+	Error          string
 }
 
 var idCounter uint
@@ -40,7 +43,7 @@ func Begin() {
 
 }
 
-// Get rule
+// Get
 func Get(id uint) (Rule_t, bool) {
 
 	mutex.RLock()
@@ -55,7 +58,6 @@ func Get(id uint) (Rule_t, bool) {
 
 }
 
-// GetAll
 func GetAll() []Rule_t {
 
 	mutex.RLock()
@@ -69,7 +71,6 @@ func GetAll() []Rule_t {
 
 }
 
-// GetAllByTag
 func GetAllByTag(Tag string) []Rule_t {
 
 	mutex.RLock()
@@ -85,7 +86,6 @@ func GetAllByTag(Tag string) []Rule_t {
 
 }
 
-// GetByAutomationId
 func GetByAutomationId(AutomationId uint) []Rule_t {
 
 	mutex.RLock()
@@ -101,7 +101,6 @@ func GetByAutomationId(AutomationId uint) []Rule_t {
 
 }
 
-// GetByAutomationTagId
 func GetByAutomationTagId(Tag string, AutomationId uint) []Rule_t {
 
 	mutex.RLock()
@@ -117,7 +116,6 @@ func GetByAutomationTagId(Tag string, AutomationId uint) []Rule_t {
 
 }
 
-// CountTriggeredByAutomationTagId
 func CountTriggeredByAutomationTagId(Tag string, AutomationId uint) (total uint, triggered uint) {
 
 	mutex.RLock()
@@ -135,7 +133,7 @@ func CountTriggeredByAutomationTagId(Tag string, AutomationId uint) (total uint,
 
 }
 
-// SetTrigger
+// Trigger
 func SetTriggerFunc(id uint, triggerFunc func(uint)) {
 
 	mutex.Lock()
@@ -148,34 +146,6 @@ func SetTriggerFunc(id uint, triggerFunc func(uint)) {
 
 }
 
-func SetValue(id uint, value interface{}) {
-
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	_, ok := rules[id]
-	if ok {
-		rules[id].Value_Time = time.Now()
-		rules[id].Value = value
-	}
-
-}
-
-// SetModule
-func SetModule(id uint, module interface{}) {
-
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	_, ok := rules[id]
-	if ok {
-		rules[id].Module = module
-		rules[id].Initialized = true
-	}
-
-}
-
-// SetTrigger
 func SetTrigger(id uint, trigger bool) {
 
 	mutex.Lock()
@@ -193,7 +163,55 @@ func SetTrigger(id uint, trigger bool) {
 
 }
 
-// Add
+// Value
+func SetValue(id uint, value interface{}) {
+
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	_, ok := rules[id]
+	if ok {
+		rules[id].Value_Time = time.Now()
+		rules[id].Value = value
+	}
+
+}
+
+func SetModule(id uint, module interface{}) {
+
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	_, ok := rules[id]
+	if ok {
+		rules[id].Module = module
+		rules[id].Initialized = true
+	}
+
+}
+
+// Stats
+func SetError(id uint, err string, args ...interface{}) {
+
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	_, ok := rules[id]
+	if ok {
+		rules[id].Error = fmt.Sprintf(err, args...)
+		if rules[id].Error != "" {
+			log.WithFields(log.Fields{
+				"Id":    rules[id].Id,
+				"Text":  rules[id].Text,
+				"Error": rules[id].Error,
+			}).Errorf("[RULE] Error in Rule [%06d]", rules[id].Id)
+		}
+
+	}
+
+}
+
+// Add / Remove Rules
 func Add(Tag string, AutomationId uint, Text string) uint {
 
 	mutex.Lock()
@@ -210,7 +228,6 @@ func Add(Tag string, AutomationId uint, Text string) uint {
 
 }
 
-// Remove
 func Remove(id uint) {
 
 	mutex.Lock()
@@ -219,7 +236,6 @@ func Remove(id uint) {
 
 }
 
-// RemoveByAutomationId
 func RemoveByAutomationId(AutomationId uint) {
 
 	mutex.Lock()

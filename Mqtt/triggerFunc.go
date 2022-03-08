@@ -6,6 +6,7 @@ import (
 	"MqttCommander/Rule"
 	"bytes"
 	"fmt"
+	"time"
 
 	"github.com/tidwall/sjson"
 )
@@ -48,7 +49,11 @@ func TriggerFunc(RuleId uint) {
 
 		// Publish payload
 		if !Config.Get().Muted {
-			Client.Publish(module.Topic, 2, module.Retained, payload)
+			if token := Client.Publish(module.Topic, 2, module.Retained, payload); !token.WaitTimeout(5*time.Second) || token.Error() != nil {
+				Rule.SetError(rule.Id, "[MQTT] Error while publishing to topic %v", token.Error())
+			} else {
+				Rule.SetError(rule.Id, "")
+			}
 		}
 	}
 

@@ -1,13 +1,25 @@
+{{ if not .BodyOnly }}
 <html>
     <head>
         <title>{{.ConfigFile.Name}}</title>
-        <meta http-equiv="refresh" content="1">
+        <meta http-equiv="refresh" content="3600">
         <meta name="viewport" content="width=device-width, initial-scale=0.4">
         <link rel="stylesheet" href="bootstrap.min.css">
         <style>
             * {
                 font-family: monospace !important;
                 font-size:10pt !important;
+                -webkit-touch-callout: none; /* iOS Safari */
+                -webkit-user-select: none; /* Safari */
+                -khtml-user-select: none; /* Konqueror HTML */
+                -moz-user-select: none; /* Old versions of Firefox */
+                -ms-user-select: none; /* Internet Explorer/Edge */
+                user-select: none; /* Non-prefixed version */
+            }
+            body{
+                width:100%;
+                overflow-x: hidden;
+                overflow-x: scroll;
             }
             td{
                 padding:2px !important;
@@ -23,19 +35,53 @@
                 padding:2px !important;
             }
         </style>
+        <script type="text/javascript">
+            // Smooth reload
+            var myHeaders = new Headers();
+            myHeaders.append('pragma', 'no-cache');
+            myHeaders.append('cache-control', 'no-cache');
+            myHeaders.append('body-only', '1');
+            setInterval(function () { 
+                fetch(window.location.href,{method: 'GET',headers: myHeaders}).then(function (response) {
+                    return response.text();
+                })
+                .then(function (text) {
+                    document.body.innerHTML = text;
+                })
+                .catch((error) => {
+                    document.getElementById("connectionlost").style.display = "block";
+                    document.getElementById("connectionlosttext").innerHTML = error;
+                });
+            }, 1000);
+        </script>
     </head>
-    <body>
 
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+
+    <body>
+{{ end }}
+
+        <!-- Connection lost -->
+        <div id="connectionlost" style="display:none" >
+            <div class="vh-100 vw-100 fixed-top bg-danger d-flex align-items-center justify-content-center" >
+                <div style="font-size:30pt !important">
+                    CONNECTION LOST<br />
+                    <span id="connectionlosttext"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navbar -->
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark" style="border-bottom:1px black solid">
             <div class="container-fluid ">
                 <a class="navbar-brand" href="/">{{ .ConfigFile.Name }} ({{.AutomationsLen}} Automations)</a>
-                {{.LocalTime}}
-                {{ if .MqttClientIsConnectionOpen  }} <span class="badge bg-success">Mqtt connected</span> {{else}} <span class="badge bg-warning">Mqtt not connected</span> {{ end }}
+                {{ .LocalTime }}
+                {{ if .MqttClientIsConnectionOpen }} <span class="badge bg-success">Mqtt connected</span> {{else}} <span class="badge bg-danger">Mqtt not connected</span> {{ end }}
                 {{ if .ConfigFile.Muted  }} <span class="badge bg-warning">System Muted</span> {{ end }}
-                <span class="badge bg-success"> {{ .MemMib  }} MiB</span>
+                <span class="badge bg-success"> Ram: {{ .MemMib  }} MiB, Threads: {{ .NumGoroutine  }}, Cores: {{ .NumCPU  }}</span>
             </div>
         </nav>
 
+        <!-- Folders -->
         <div class="container-fluid p-4">
             <div class="row">
                 {{range .Files }}
@@ -48,154 +94,181 @@
             </div>
         </div>
 
-
+        <!-- Automations -->
         <div class="container-fluid p-4">
             {{ range .Automations }}
                 {{ $automation := . }}
-                {{ if not .Hidden }} 
-                    <div class="card mb-4" style="border:1px black solid">
-                        <div class="card-header bg-dark p-2 border-2 {{if or (.Triggered) (.Triggered_Time | range2s) }} border-success {{else}} border-danger {{ end }}" style="border-radius:0;">
-                            <span class="badge {{if .Triggered_Time | range2s }} bg-warning {{ else }} bg-info {{ end }}">{{.Triggered_Time | diff }}</span>
-                            <span class="badge bg-info" >{{.Mode}}</span>
-                            {{ if .Retrigger  }}     <span class="badge bg-success">Retrigger</span> {{ end }}
-                            {{ if .RTTduration  }}   <span class="badge bg-success">RTT: {{ .RTTduration }}</span> {{ end }}
-                            <span style="font-size:11pt !important">{{.Name}}</span>
-                            <span style="float:right" class="text-muted">[ID:{{ .Id }}] {{ .Path }}</span>
-                            <table class="table text-left border-none table-borderless m-0 mt-2">
-                                <tr>
-                                    <td>Triggered <span class="badge bg-info">{{ .Triggered_Time | diff }}</span></td>
-                                    <td>Pause</td>
-                                    <td>Reminder</td>
-                                    <td>Delay</td>
-                                    <td>Value <span class="badge bg-info">{{ .Value_Time | diff }}</span></td>
-                                </tr>
-                                <tr>
-                                    <td class="{{ if .Triggered_Time | range2s }} bg-warning {{ end }}" >{{ .Triggered }}</td>
-                                    <td class="{{ if . | automationInPause }} bg-warning {{ end }}" >{{ .Pause }}</td>
-                                    <td class="{{ if .Reminder_Active }} bg-warning {{ end }}" >{{ .Reminder }}</td>
-                                    <td class="{{ if .Delay_Active }} bg-warning {{ end }}" > {{ .Delay }}</td>
-                                    <td class="{{ if .Value_Time | range2s }} bg-warning {{ end }}" >{{ getTypedValue .Value }}</td>
-                                </tr>
-                            </table>
+                {{ if .Initialized }} 
+                    {{ if not .Hidden }} 
+                        <div class="card mb-4" style="border:1px black solid">
+                            <div class="card-header bg-dark p-2 border-2 {{if or (.Triggered) (.Triggered_Time | range2s) }} border-success {{else}} border-danger {{ end }}" style="border-radius:0;">
+                                <span class="badge {{if .Triggered_Time | range2s }} bg-warning {{ else }} bg-info {{ end }}">{{.Triggered_Time | diff }}</span>
+                                <span class="badge bg-info" >{{.Mode}}</span>
+                                {{ if .Retrigger  }}     <span class="badge bg-success">Retrigger</span> {{ end }}
+                                {{ if .RTTduration  }}   <span class="badge bg-success">RTT: {{ .RTTduration }}</span> {{ end }}
+                                <span style="font-size:11pt !important">{{.Name}}</span>
+                                <span style="float:right" class="text-muted">[ID:{{ .Id }}] {{ .Path }}</span>
+                                <table class="table text-left border-none table-borderless m-0 mt-2">
+                                    <tr>
+                                        <td>Triggered <span class="badge bg-info">{{ .Triggered_Time | diff }}</span></td>
+                                        <td>Pause</td>
+                                        <td>Reminder</td>
+                                        <td>Delay</td>
+                                        <td>Value <span class="badge bg-info">{{ .Value_Time | diff }}</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="{{ if .Triggered_Time | range2s }} bg-warning {{ end }}" >{{ .Triggered }}</td>
+                                        <td class="{{ if . | automationInPause }} bg-warning {{ end }}" >{{ .Pause }}</td>
+                                        <td class="{{ if .Reminder_Active }} bg-warning {{ end }}" >{{ .Reminder }}</td>
+                                        <td class="{{ if .Delay_Active }} bg-warning {{ end }}" > {{ .Delay }}</td>
+                                        <td class="{{ if .Value_Time | range2s }} bg-warning {{ end }}" >{{ getTypedValue .Value }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <!-- constraint/cron -->
+                            {{ $rules := getByAutomationId "constraint/cron" .Id }}
+                            {{ if $rules }}
+                                <div class="card-body bg-secondary p-2">
+                                    <table class="table bg-dark table-border-show m-0 mt-1">
+                                        <tr>
+                                            <td><b>CRON Constraints</b> - NextTime</td>
+                                            <td>Triggered</td>
+                                            <td>Options</td>
+                                        </tr>
+                                        {{ range $rules }}
+                                            {{ if .Initialized }} 
+                                                <tr class="{{if or (.Triggered) (.Triggered_Time | range2s) }} bg-success {{ end }}" >
+                                                    <td>{{ .Module.NextTime}}</td>
+                                                    <td class="{{if .Triggered_Time | range2s }} bg-warning {{ end }}">{{.Triggered}} <span class="badge bg-info">{{.Triggered_Time | diff}}</span></td>
+                                                    <td>
+                                                        {{ if .Error  }}            <span class="badge bg-danger">Error: {{ .Error }}</span>    {{end}}
+                                                        {{ if .Module.Reset  }}     <span class="badge bg-info">Reset: {{ .Module.Reset  }}</span>  {{end}}
+                                                        {{ if .Module.NoTrigger  }} <span class="badge bg-warning">NoTrigger</span>             {{end}}
+                                                    </td>
+                                                </tr>
+                                            {{ else }}
+                                                <tr class="bg-danger">
+                                                    <td colspan="10">{{ .Text }} | {{ .Error }}</td>
+                                                </tr>
+                                            {{ end }}
+                                        {{ end }}
+                                    </table>
+                                </div>
+                            {{ end }}
+
+
+                            <!-- constraint/mqtt -->
+                            {{ $rules := getByAutomationId "constraint/mqtt" .Id }}
+                            {{ if $rules }}
+                                <div class="card-body bg-secondary p-2">
+                                    <table class="table bg-dark table-border-show m-0 mt-1">
+                                        <tr>
+                                            <td><b>MQTT Constraints</b> - Topic</td>
+                                            <td>Object</td>
+                                            <td>Comparator</td>
+                                            <td>Value</td>
+                                            <td>Triggered</td>
+                                            <td>Value</td>
+                                            <td>Options</td>
+                                        </tr>
+                                        {{ range $rules }}
+                                            {{ if .Initialized }} 
+                                                <tr class="{{if or (.Triggered) (.Triggered_Time | range2s) }} bg-success {{ end }}" >
+                                                    <td>{{.Module.Topic}}</td>
+                                                    <td>{{.Module.Object}}</td>
+                                                    <td>{{.Module.Comparator}}</td>
+                                                    <td>{{ getTypedValue .Module.Value}}</td>
+                                                    <td class="{{if .Triggered_Time | range2s }}  bg-warning {{ end }}" >{{.Triggered}} <span class="badge bg-info">{{.Triggered_Time | diff }}</span></td>
+                                                    <td class="{{if .Value_Time | range2s }} bg-warning {{ end }}" >{{ getTypedValue .Value }} <span class="badge bg-info">{{.Value_Time | diff }}</span></td>
+                                                    <td>
+                                                        {{ if .Error  }}            <span class="badge bg-danger">Error: {{ .Error }}</span>            {{end}}
+                                                        {{ if .Module.Retained  }}  <span class="badge bg-warning">BlockRetained</span>                 {{end}}
+                                                        {{ if .Module.NoTrigger  }} <span class="badge bg-warning">NoTrigger</span>                     {{end}}
+                                                        {{ if .Module.Reset  }}     <span class="badge bg-info">Reset: {{ .Module.Reset }}</span>       {{end}}
+                                                        {{ if .Module.Timeout  }}   <span class="badge bg-info">Timeout: {{ .Module.Timeout }}</span>   {{end}}
+                                                    </td>
+                                                </tr>
+                                            {{ else }}
+                                                <tr class="bg-danger">
+                                                    <td colspan="10">{{ .Text }} | {{ .Error }}</td>
+                                                </tr>
+                                            {{ end }}
+                                        {{ end }}
+                                    </table>
+                                </div>
+                            {{ end }}
+
+
+                            <!-- action/http -->
+                            {{ $rules := getByAutomationId "action/http" .Id }}
+                            {{ if $rules }}
+                                <div class="card-body bg-secondary p-2">
+                                    <table class="table bg-dark table-border-show m-0 mt-1">
+                                        <tr>
+                                            <td><b>HTTP Actions</b> - URL</td>
+                                            <td>Options</td>
+                                        </tr>
+                                        {{ range $rules }}
+                                            {{ if .Initialized }} 
+                                                <tr class="{{if or (.Triggered) (.Triggered_Time | range2s) }} bg-success {{ end }}" >
+                                                    <tr class="{{if or (.Triggered) (.Triggered_Time | range2s ) }} bg-success {{ end }}" >
+                                                        <td>{{.Http}}</td>
+                                                        <td>
+                                                            {{ if .Error  }}            <span class="badge bg-danger">Error: {{ .Error }}</span>    {{end}}
+                                                            {{ if .Module.Reverse  }}   <span class="badge bg-warning">Reverse</span>               {{end}}
+                                                        </td>
+                                                    </tr>
+                                                </tr>
+                                            {{ else }}
+                                                <tr class="bg-danger">
+                                                    <td colspan="10">{{ .Text }} | {{ .Error }}</td>
+                                                </tr>
+                                            {{ end }}
+                                        {{ end }}
+                                    </table>
+                                </div>
+                            {{ end }}
+
+                            <!-- action/mqtt -->
+                            {{ $rules := getByAutomationId "action/mqtt" .Id }}
+                            {{ if $rules }}
+                                <div class="card-body bg-secondary p-2">
+                                    <table class="table bg-dark table-border-show m-0 mt-1">
+                                        <tr>
+                                            <td><b>MQTT Actions</b> - Topic</td>
+                                            <td>Object</td>
+                                            <td>Value</td>
+                                            <td>Options</td>
+                                        </tr>
+                                        {{ range $rules }}
+                                            {{ if .Initialized }} 
+                                                <tr class="{{if or (.Triggered) (.Triggered_Time | range2s) }} bg-success {{ end }}" >
+                                                    <td>{{ .Module.Topic }}</td>
+                                                    <td>{{ .Module.Object }}</td>
+                                                    <td>{{ getTypedValue .Module.Value }}</td>
+                                                    <td>
+                                                        {{ if .Error  }}            <span class="badge bg-danger">Error: {{ .Error }}</span>    {{end}}
+                                                        {{ if .Module.Retained  }}  <span class="badge bg-warning">Retained</span>              {{end}}
+                                                        {{ if .Module.Reverse  }}   <span class="badge bg-warning">Reverse</span>               {{end}}
+                                                    </td>
+                                                </tr>
+                                            {{ else }}
+                                                <tr class="bg-danger">
+                                                    <td colspan="10">{{ .Text }} | {{ .Error }}</td>
+                                                </tr>
+                                            {{ end }}
+                                        {{ end }}
+                                    </table>
+                                </div>
+                            {{ end }}
+                                
                         </div>
-
-                        <!-- constraint/cron -->
-                        {{ $rules := getByAutomationId "constraint/cron" .Id }}
-                        {{ if $rules }}
-                            <div class="card-body bg-secondary p-2">
-                                <table class="table bg-dark table-border-show m-0 mt-1">
-                                    <tr>
-                                        <td><b>CRON Constraints</b> - NextTime</td>
-                                        <td>Reset</td>
-                                        <td>Triggered</td>
-                                        <td>Options</td>
-                                    </tr>
-                                    {{ range $rules }}
-                                        <tr class="{{if or (.Triggered) (.Triggered_Time | range2s) }} bg-success {{ end }}" >
-                                            <td>{{ .Module.NextTime}}</td>
-                                            <td>{{ .Module.Reset}}</td>
-                                            <td class="{{if .Triggered_Time | range2s }} bg-warning {{ end }}">{{.Triggered}} <span class="badge bg-info">{{.Triggered_Time | diff}}</span></td>
-                                            <td>
-                                                {{ if .Module.NoTrigger  }} <span class="badge bg-warning">NoTrigger</span> {{end}}
-                                            </td>
-                                        </tr>
-                                    {{ end }}
-                                </table>
-                            </div>
-                        {{ end }}
-
-
-                        <!-- constraint/mqtt -->
-                        {{ $rules := getByAutomationId "constraint/mqtt" .Id }}
-                        {{ if $rules }}
-                            <div class="card-body bg-secondary p-2">
-                                <table class="table bg-dark table-border-show m-0 mt-1">
-                                    <tr>
-                                        <td><b>MQTT Constraints</b> - Topic</td>
-                                        <td>Object</td>
-                                        <td>Comparator</td>
-                                        <td>Value</td>
-                                        <td>Reset</td>
-                                        <td>Timeout</td>
-                                        <td>Triggered</td>
-                                        <td>Value</td>
-                                        <td>Options</td>
-                                    </tr>
-                                    {{ range $rules }}
-                                        <tr class="{{if or (.Triggered) (.Triggered_Time | range2s) }} bg-success {{ end }}" >
-                                            <td>{{.Module.Topic}}</td>
-                                            <td>{{.Module.Object}}</td>
-                                            <td>{{.Module.Comparator}}</td>
-                                            <td>{{ getTypedValue .Module.Value}}</td>
-                                            <td>{{.Module.Reset}}</td>
-                                            <td>{{.Module.Timeout}}</td>
-                                            <td class="{{if .Triggered_Time | range2s }}  bg-warning {{ end }}" >{{.Triggered}} <span class="badge bg-info">{{.Triggered_Time | diff }}</span></td>
-                                            <td class="{{if .Value_Time | range2s }} bg-warning {{ end }}" >{{ getTypedValue .Value }} <span class="badge bg-info">{{.Value_Time | diff }}</span></td>
-                                            <td>
-                                                {{ if .Module.Retained  }} <span class="badge bg-warning">BlockRetained</span> {{end}}
-                                                {{ if .Module.NoTrigger  }} <span class="badge bg-warning">NoTrigger</span> {{end}}
-                                                {{ if .Module.NoValue  }} <span class="badge bg-warning">NoValue</span> {{end}}
-                                            </td>
-                                        </tr>
-                                    {{ end }}
-                                </table>
-                            </div>
-                        {{ end }}
-
-
-                        <!-- action/http -->
-                        {{ $rules := getByAutomationId "action/http" .Id }}
-                        {{ if $rules }}
-                            <div class="card-body bg-secondary p-2">
-                                <table class="table bg-dark table-border-show m-0 mt-1">
-                                    <tr>
-                                        <td><b>HTTP Actions</b> - URL</td>
-                                        <td>Options</td>
-                                    </tr>
-                                    {{ range $rules }}
-                                        <tr class="{{if or (.Triggered) (.Triggered_Time | range2s) }} bg-success {{ end }}" >
-                                            <tr class="{{if or (.Triggered) (.Triggered_Time | range2s ) }} bg-success {{ end }}" >
-                                                <td>{{.Http}}</td>
-                                                <td>
-                                                    {{ if .Module.Reverse  }} <span class="badge bg-warning">Reverse</span> {{end}}
-                                                </td>
-                                            </tr>
-                                        </tr>
-                                    {{ end }}
-                                </table>
-                            </div>
-                        {{ end }}
-
-                        <!-- action/mqtt -->
-                        {{ $rules := getByAutomationId "action/mqtt" .Id }}
-                        {{ if $rules }}
-                            <div class="card-body bg-secondary p-2">
-                                <table class="table bg-dark table-border-show m-0 mt-1">
-                                    <tr>
-                                        <td><b>MQTT Actions</b> - Topic</td>
-                                        <td>Object</td>
-                                        <td>Value</td>
-                                        <td>Options</td>
-                                    </tr>
-                                    {{ range $rules }}
-                                        <tr class="{{if or (.Triggered) (.Triggered_Time | range2s) }} bg-success {{ end }}" >
-                                            <td>{{ .Module.Topic }}</td>
-                                            <td>{{ .Module.Object }}</td>
-                                            <td>{{ getTypedValue .Module.Value }}</td>
-                                            <td>
-                                                {{ if .Module.Retained  }} <span class="badge bg-warning">Retained</span> {{end}}
-                                                {{ if .Module.Reverse  }} <span class="badge bg-warning">Reverse</span> {{end}}
-                                            </td>
-                                        </tr>
-                                    {{ end }}
-                                </table>
-                            </div>
-                        {{ end }}
-                            
-                    </div>
+                    {{ end }}
                 {{ end }}
             {{ end }}
         </div>
-        
-            
-                        
+{{ if not .BodyOnly }}
+    </body>
+</html>
+{{ end }}

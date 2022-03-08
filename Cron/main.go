@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/gorhill/cronexpr"
-	log "github.com/sirupsen/logrus"
 )
 
 type Cron_Parsed_t struct {
@@ -39,8 +38,10 @@ func Deploy() {
 			var err error
 			module.Expression, err = cronexpr.Parse(Config.FindParm(`^\s*(?P<Value>[^\n\(]*)`, rule.Text))
 			if err != nil {
-				log.Errorf("[CRON] Error while parsing expression %s ", err)
+				Rule.SetError(rule.Id, "[CRON] Error while parsing expression %s ", err)
 				return
+			} else {
+				Rule.SetError(rule.Id, "")
 			}
 			module.Reset, _ = time.ParseDuration(Config.FindParm(`\(Reset\s+(\S+)\)`, rule.Text))
 			module.NoTrigger, _ = strconv.ParseBool(Config.FindParm(`\(NoTrigger\s+(\S+)\)`, rule.Text))

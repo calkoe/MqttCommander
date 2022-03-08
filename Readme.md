@@ -131,10 +131,12 @@ Retained             | Retained [0/1]                                        | R
 ## MqttCommander Roadmap:
 - [x] Add Support for Multi-Level JSON Objects
 - [x] Complete Documentation
-- [ ] Dashbaord: Add indicator for ivalid rules
-- [ ] Dashbaord: Display Timeout and Reset as optional badges
-- [ ] Dashbaord: Fix representation of long numbers
-- [ ] Add Support for XOR Rules
+- [X] Dashbaord: Smooth Reload
+- [X] Dashbaord: Hide uninitialized rules
+- [X] Dashbaord: Add indicator for invalid rules
+- [X] Dashbaord: Display Timeout and Reset as optional badges
+- [X] Dashbaord: Fix representation of long numbers
+- [X] Add Support for XOR Rules
 - [ ] Dashbaord: Redesign File-Overview
 
 ---

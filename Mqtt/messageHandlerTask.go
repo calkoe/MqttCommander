@@ -40,19 +40,14 @@ func onMessage(rule Rule.Rule_t, client MQTT.Client, msg MQTT.Message) {
 
 	// Raw Value OR JSON
 	if module.Object == "" {
-
 		value = Config.ParseType(string(msg.Payload()))
-
 	} else {
-
 		// Parse JSON Object-Path
 		v := gjson.Get(string(msg.Payload()), module.Object)
 		if !v.Exists() {
 			return
 		}
-
 		value = Config.ParseType(v.String())
-
 	}
 
 	// Set Rule value
@@ -68,7 +63,8 @@ func onMessage(rule Rule.Rule_t, client MQTT.Client, msg MQTT.Message) {
 		module.Timeout_Ticker.Reset(module.Timeout)
 	}
 
-	// Rules
+	// Comparators
+	var err string
 	if module.Comparator == "" && module.Timeout == 0 {
 		SetTrigger(rule.Id, true)
 		if module.Reset == 0 {
@@ -92,6 +88,7 @@ func onMessage(rule Rule.Rule_t, client MQTT.Client, msg MQTT.Message) {
 				}
 			default:
 				SetTrigger(rule.Id, module.Comparator == "!=")
+				err = "Datatype missmatch"
 			}
 		case float64:
 			switch module.Value.(type) {
@@ -117,12 +114,13 @@ func onMessage(rule Rule.Rule_t, client MQTT.Client, msg MQTT.Message) {
 				}
 			default:
 				SetTrigger(rule.Id, module.Comparator == "!=")
+				err = "Datatype missmatch"
 			}
 		case string:
 			switch module.Value.(type) {
 			case string:
-				match, err := regexp.MatchString(module.Value.(string), value.(string))
-				if err != nil {
+				match, e := regexp.MatchString(module.Value.(string), value.(string))
+				if e != nil {
 					log.Error("[MQTT] Error while comparing constraints value: ", err)
 				}
 				if module.Comparator == "=" && match {
@@ -136,12 +134,17 @@ func onMessage(rule Rule.Rule_t, client MQTT.Client, msg MQTT.Message) {
 				}
 			default:
 				SetTrigger(rule.Id, module.Comparator == "!=")
+				err = "Datatype missmatch"
 			}
 		default:
 			SetTrigger(rule.Id, module.Comparator == "!=")
+			err = "Datatype missmatch"
 		}
 
 	}
+
+	// Set Error
+	Rule.SetError(rule.Id, err)
 
 	/*fmt.Printf("Constraint.Value:%rule\n", Constraint.Value)
 	fmt.Printf("Constraint.Value(Type):%T\n", Constraint.Value)
