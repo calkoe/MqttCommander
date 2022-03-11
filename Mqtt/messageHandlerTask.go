@@ -65,10 +65,12 @@ func onMessage(rule Rule.Rule_t, client MQTT.Client, msg MQTT.Message) {
 
 	// Comparators
 	var err string
-	if module.Comparator == "" && module.Timeout == 0 {
-		SetTrigger(rule.Id, true)
-		if module.Reset == 0 {
-			SetTrigger(rule.Id, false)
+	if module.Comparator == "" {
+		if module.Timeout == 0 {
+			SetTrigger(rule.Id, true)
+			if module.Reset == 0 {
+				SetTrigger(rule.Id, false)
+			}
 		}
 	} else {
 		switch value.(type) {

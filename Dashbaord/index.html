@@ -34,6 +34,14 @@
             .badge{
                 padding:2px !important;
             }
+            .blink_me {
+                animation: blinker 1s ease infinite;
+            }
+            @keyframes blinker {
+                50% {
+                    opacity: 0.1;
+                }
+            }
         </style>
         <script type="text/javascript">
             // Smooth reload
@@ -62,8 +70,8 @@
 
         <!-- Connection lost -->
         <div id="connectionlost" style="display:none" >
-            <div class="vh-100 vw-100 fixed-top bg-danger d-flex align-items-center justify-content-center" >
-                <div style="font-size:30pt !important">
+            <div class="vh-100 vw-100 fixed-top bg-dark text-danger d-flex align-items-center justify-content-center" >
+                <div class="blink_me" style="font-size:30pt !important">
                     CONNECTION LOST<br />
                     <span id="connectionlosttext"></span>
                 </div>

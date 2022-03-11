@@ -98,7 +98,7 @@ func Begin() {
 			case bool:
 				return fmt.Sprintf("<i>%t</i>", v)
 			case float64:
-				return strings.Trim(strings.Trim(fmt.Sprintf("%f", v), "0"), ".")
+				return fmt.Sprintf("%f", v)
 			case string:
 				if v.(string) == "" {
 					return ""
