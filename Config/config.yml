@@ -2,3 +2,5 @@
 Name: MqttCommander System Name
 Timezone: Europe/Berlin
 MqttUri: tcp://user:password@test.mosquitto.org:1883/
+MqttQos: 0
+Muted: false

@@ -13,6 +13,8 @@ import (
 
 func TriggerFunc(RuleId uint) {
 
+	ConfigCopy := Config.Get()
+
 	// Get Rule
 	rule, ok := Rule.Get(RuleId)
 	if !ok {
@@ -49,7 +51,7 @@ func TriggerFunc(RuleId uint) {
 
 		// Publish payload
 		if !Config.Get().Muted {
-			if token := Client.Publish(module.Topic, 2, module.Retained, payload); !token.WaitTimeout(5*time.Second) || token.Error() != nil {
+			if token := Client.Publish(module.Topic, ConfigCopy.MqttQos, module.Retained, payload); !token.WaitTimeout(5*time.Second) || token.Error() != nil {
 				Rule.SetError(rule.Id, "[MQTT] Error while publishing to topic %v", token.Error())
 			} else {
 				Rule.SetError(rule.Id, "")

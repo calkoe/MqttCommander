@@ -26,6 +26,7 @@ type ConfigFile_t struct {
 	Timezone        string `yaml:"Timezone"`
 	Timezone_parsed *time.Location
 	MqttUri         string `yaml:"MqttUri"`
+	MqttQos         byte   `yaml:"MqttQos"`
 	AutomationsPath string `yaml:"AutomationsPath"`
 	Muted           bool   `yaml:"Muted"`
 	ConfigPath      string

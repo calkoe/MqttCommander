@@ -73,7 +73,7 @@ func Begin() {
 		for _, rule := range Rule.GetAllByTag("constraint/mqtt") {
 			if rule.Initialized {
 				go func(rule Rule.Rule_t) {
-					if token := Client.Subscribe(rule.Module.(Mqtt_Parsed_t).Topic, 2, nil); !token.WaitTimeout(5*time.Second) || token.Error() != nil {
+					if token := Client.Subscribe(rule.Module.(Mqtt_Parsed_t).Topic, ConfigCopy.MqttQos, nil); !token.WaitTimeout(5*time.Second) || token.Error() != nil {
 						Rule.SetError(rule.Id, "[MQTT] Error while subscribing to topic %v ", token.Error())
 					} else {
 						Rule.SetError(rule.Id, "")
@@ -99,6 +99,8 @@ func Begin() {
 
 // Init Constraints and Actions
 func Deploy() {
+
+	ConfigCopy := Config.Get()
 
 	// Setup Constraints
 	for _, rule := range Rule.GetAllByTag("constraint/mqtt") {
@@ -149,7 +151,7 @@ func Deploy() {
 
 				// Add Subscription
 				go func(rule Rule.Rule_t) {
-					if token := Client.Subscribe(module.Topic, 2, nil); !token.WaitTimeout(5*time.Second) || token.Error() != nil {
+					if token := Client.Subscribe(module.Topic, ConfigCopy.MqttQos, nil); !token.WaitTimeout(5*time.Second) || token.Error() != nil {
 						Rule.SetError(rule.Id, "[MQTT] Error while subscribing to topic %v ", token.Error())
 					} else {
 						Rule.SetError(rule.Id, "")
