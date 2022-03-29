@@ -71,6 +71,8 @@ func onMessage(rule Rule.Rule_t, client MQTT.Client, msg MQTT.Message) {
 			if module.Reset == 0 {
 				SetTrigger(rule.Id, false)
 			}
+		} else {
+			SetTrigger(rule.Id, false)
 		}
 	} else {
 		switch value.(type) {
